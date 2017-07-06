@@ -40,35 +40,36 @@ ClassImp(AliAnalysisTaskRhoBaseDev);
  * Default constructor. Needed by ROOT I/O
  */
 AliAnalysisTaskRhoBaseDev::AliAnalysisTaskRhoBaseDev() :
-  AliAnalysisTaskEmcalJetLight("AliAnalysisTaskRhoBaseDev", kFALSE),
+  AliAnalysisTaskJetUE(),
   fOutRhoName(),
   fOutRhoScaledName(),
   fRhoFunction(0),
   fScaleFunction(0),
   fAttachToEvent(kTRUE),
-  fNbins(250),
-  fMinBinPt(0),
-  fMaxBinPt(500),
+  fTaskConfigured(kFALSE),
   fOutRho(0),
   fOutRhoScaled(0),
-  fHistJetPtvsCent(0),
-  fHistJetAreavsCent(0),
-  fHistJetRhovsCent(0),
-  fHistNjetvsCent(0),
-  fHistJetPtvsNtrack(0),
-  fHistJetAreavsNtrack(0),
-  fHistNjetvsNtrack(0),
-  fHistRhovsCent(0),
-  fHistRhoScaledvsCent(0),
-  fHistRhovsNtrack(0),
-  fHistRhoScaledvsNtrack(0),
-  fHistRhovsNcluster(0),
-  fHistRhoScaledvsNcluster(0)
+  fHistRhoVsCent(0),
+  fHistRhoVsLeadJetPt(),
+  fHistLeadJetPtVsCent(),
+  fHistLeadJetPtDensityVsCent(),
+  fHistTotJetAreaVsCent(),
+  fHistLeadJetNconstVsCent(),
+  fHistLeadJetNconstVsPt(),
+  fHistNjetVsCent(),
+  fHistNjetVsNtrack(),
+  fHistRhoVsLeadTrackPt(0),
+  fHistRhoVsNtrack(0),
+  fHistLeadTrackPtVsCent(0),
+  fHistNtrackVsCent(0),
+  fHistRhoVsLeadClusterE(0),
+  fHistRhoVsNcluster(0),
+  fHistLeadClusterEVsCent(0),
+  fHistNclusterVsCent(0),
+  fHistRhoScaledVsCent(0),
+  fHistRhoScaledVsNtrack(0),
+  fHistRhoScaledVsNcluster(0)
 {
-  for (Int_t i = 0; i < 4; i++) {
-    fHistJetNconstVsPt[i] = 0;
-    fHistJetRhovsEta[i] = 0;
-  }
 }
 
 /**
@@ -78,35 +79,36 @@ AliAnalysisTaskRhoBaseDev::AliAnalysisTaskRhoBaseDev() :
  * @param[in] histo If kTRUE, the task will also produce QA histograms
  */
 AliAnalysisTaskRhoBaseDev::AliAnalysisTaskRhoBaseDev(const char *name, Bool_t histo) :
-    AliAnalysisTaskEmcalJetLight(name, histo),
+  AliAnalysisTaskJetUE(name, histo),
   fOutRhoName(),
   fOutRhoScaledName(),
   fRhoFunction(0),
   fScaleFunction(0),
   fAttachToEvent(kTRUE),
-  fNbins(250),
-  fMinBinPt(0),
-  fMaxBinPt(500),
+  fTaskConfigured(kFALSE),
   fOutRho(0),
   fOutRhoScaled(0),
-  fHistJetPtvsCent(0),
-  fHistJetAreavsCent(0),
-  fHistJetRhovsCent(0),
-  fHistNjetvsCent(0),
-  fHistJetPtvsNtrack(0),
-  fHistJetAreavsNtrack(0),
-  fHistNjetvsNtrack(0),
-  fHistRhovsCent(0),
-  fHistRhoScaledvsCent(0),
-  fHistRhovsNtrack(0),
-  fHistRhoScaledvsNtrack(0),
-  fHistRhovsNcluster(0),
-  fHistRhoScaledvsNcluster(0)
+  fHistRhoVsCent(0),
+  fHistRhoVsLeadJetPt(),
+  fHistLeadJetPtVsCent(),
+  fHistLeadJetPtDensityVsCent(),
+  fHistTotJetAreaVsCent(),
+  fHistLeadJetNconstVsCent(),
+  fHistLeadJetNconstVsPt(),
+  fHistNjetVsCent(),
+  fHistNjetVsNtrack(),
+  fHistRhoVsLeadTrackPt(0),
+  fHistRhoVsNtrack(0),
+  fHistLeadTrackPtVsCent(0),
+  fHistNtrackVsCent(0),
+  fHistRhoVsLeadClusterE(0),
+  fHistRhoVsNcluster(0),
+  fHistLeadClusterEVsCent(0),
+  fHistNclusterVsCent(0),
+  fHistRhoScaledVsCent(0),
+  fHistRhoScaledVsNtrack(0),
+  fHistRhoScaledVsNcluster(0)
 {
-  for (Int_t i = 0; i < 4; i++) {
-    fHistJetNconstVsPt[i] = 0;
-    fHistJetRhovsEta[i] = 0;
-  }
   SetMakeGeneralHistograms(histo);
 }
 
@@ -119,106 +121,163 @@ void AliAnalysisTaskRhoBaseDev::UserCreateOutputObjects()
   if (!fCreateHisto) return;
 
   AliAnalysisTaskEmcalJetLight::UserCreateOutputObjects();
-  //ranges for PbPb
-  Float_t Ntrackrange[2] = {0, 6000};
-  //set multiplicity related axes to a smaller max value
-  if (fBeamType != kAA) Ntrackrange[1] = 200.;
+
+  ::Info("UserCreateOutputObjects", "CreateOutputObjects of task %s", GetName());
+
+  TString name;
+
+  Int_t maxTracks = 6000;
+  Double_t maxRho = 500;
+  Int_t nRhoBins = 500;
+
+  if (fForceBeamType == kpp) {
+    maxRho = 50;
+    maxTracks = 200;
+  }
+  else if (fForceBeamType == kpA) {
+    maxRho = 200;
+    maxTracks = 500;
+  }
+
+  Int_t nPtBins = TMath::CeilNint(fMaxPt / fPtBinWidth);
   
-  fHistRhovsCent = new TH2F("fHistRhovsCent", "fHistRhovsCent", 101, -1,  100, fNbins, fMinBinPt, fMaxBinPt);
-  fHistRhovsCent->GetXaxis()->SetTitle("Centrality (%)");
-  fHistRhovsCent->GetYaxis()->SetTitle("#rho (GeV/c * rad^{-1})");
-  fOutput->Add(fHistRhovsCent);
+  fHistRhoVsCent = new TH2F("fHistRhoVsCent", "fHistRhoVsCent", 100, 0,  100, nRhoBins, 0, maxRho);
+  fHistRhoVsCent->GetXaxis()->SetTitle("Centrality (%)");
+  fHistRhoVsCent->GetYaxis()->SetTitle("#rho (GeV/#it{c} #times rad^{-1})");
+  fOutput->Add(fHistRhoVsCent);
 
   if (fParticleCollArray.size() > 0) {
-    fHistRhovsNtrack = new TH2F("fHistRhovsNtrack", "fHistRhovsNtrack", 150, Ntrackrange[0], Ntrackrange[1], fNbins, fMinBinPt, fMaxBinPt);
-    fHistRhovsNtrack->GetXaxis()->SetTitle("No. of tracks");
-    fHistRhovsNtrack->GetYaxis()->SetTitle("#rho (GeV/c * rad^{-1})");
-    fOutput->Add(fHistRhovsNtrack);
+    fHistRhoVsNtrack = new TH2F("fHistRhoVsNtrack", "fHistRhoVsNtrack", 200, 0, maxTracks, nRhoBins, 0, maxRho);
+    fHistRhoVsNtrack->GetXaxis()->SetTitle("No. of tracks");
+    fHistRhoVsNtrack->GetYaxis()->SetTitle("#rho (GeV/#it{c} #times rad^{-1})");
+    fOutput->Add(fHistRhoVsNtrack);
+
+    fHistNtrackVsCent = new TH2F("fHistNtrackVsCent", "fHistNtrackVsCent", 100, 0,  100, 200, 0, maxTracks);
+    fHistNtrackVsCent->GetXaxis()->SetTitle("Centrality (%)");
+    fHistNtrackVsCent->GetYaxis()->SetTitle("No. of tracks");
+    fOutput->Add(fHistNtrackVsCent);
+
+    fHistRhoVsLeadTrackPt = new TH2F("fHistRhoVsLeadTrackPt", "fHistRhoVsLeadTrackPt", nPtBins, 0, fMaxPt, nRhoBins, 0, maxRho);
+    fHistRhoVsLeadTrackPt->GetXaxis()->SetTitle("#it{p}_{T,track} (GeV/c)");
+    fHistRhoVsLeadTrackPt->GetYaxis()->SetTitle("#rho (GeV/#it{c} #times rad^{-1})");
+    fOutput->Add(fHistRhoVsLeadTrackPt);
+
+    fHistLeadTrackPtVsCent = new TH2F("fHistLeadTrackPtVsCent", "fHistLeadTrackPtVsCent", 100, 0,  100, nPtBins, 0, fMaxPt);
+    fHistLeadTrackPtVsCent->GetXaxis()->SetTitle("Centrality (%)");
+    fHistLeadTrackPtVsCent->GetYaxis()->SetTitle("#it{p}_{T,track} (GeV/c)");
+    fOutput->Add(fHistLeadTrackPtVsCent);
   }
 
   if (fClusterCollArray.size()>0) {
-    fHistRhovsNcluster = new TH2F("fHistRhovsNcluster", "fHistRhovsNcluster", 50, 0, 1500, fNbins, fMinBinPt, fMaxBinPt);
-    fHistRhovsNcluster->GetXaxis()->SetTitle("No. of clusters");
-    fHistRhovsNcluster->GetYaxis()->SetTitle("#rho (GeV/c * rad^{-1})");
-    fOutput->Add(fHistRhovsNcluster);
+    fHistRhoVsNcluster = new TH2F("fHistRhoVsNcluster", "fHistRhoVsNcluster", 50, 0, maxTracks / 4, nRhoBins, 0, maxRho);
+    fHistRhoVsNcluster->GetXaxis()->SetTitle("No. of clusters");
+    fHistRhoVsNcluster->GetYaxis()->SetTitle("#rho (GeV/#it{c} #times rad^{-1})");
+    fOutput->Add(fHistRhoVsNcluster);
+
+    fHistNclusterVsCent = new TH2F("fHistNclusterVsCent", "fHistNclusterVsCent", 100, 0,  100, 50, 0, maxTracks / 4);
+    fHistNclusterVsCent->GetXaxis()->SetTitle("Centrality (%)");
+    fHistNclusterVsCent->GetYaxis()->SetTitle("No. of clusters");
+    fOutput->Add(fHistNclusterVsCent);
+
+    fHistRhoVsLeadClusterE = new TH2F("fHistRhoVsLeadClusterE", "fHistRhoVsLeadClusterE", nPtBins, 0, fMaxPt, nRhoBins, 0, maxRho);
+    fHistRhoVsLeadClusterE->GetXaxis()->SetTitle("#it{p}_{T,track} (GeV/c)");
+    fHistRhoVsLeadClusterE->GetYaxis()->SetTitle("#rho (GeV/#it{c} #times rad^{-1})");
+    fOutput->Add(fHistRhoVsLeadClusterE);
+
+    fHistLeadClusterEVsCent = new TH2F("fHistLeadClusterEVsCent", "fHistLeadClusterEVsCent", 100, 0,  100, nPtBins, 0, fMaxPt);
+    fHistLeadClusterEVsCent->GetXaxis()->SetTitle("Centrality (%)");
+    fHistLeadClusterEVsCent->GetYaxis()->SetTitle("#it{p}_{T,track} (GeV/c)");
+    fOutput->Add(fHistLeadClusterEVsCent);
   }
 
-  if (fJetCollArray.size() > 0) {
-    fHistJetPtvsCent = new TH2F("fHistJetPtvsCent", "fHistJetPtvsCent", 101, -1,  100, fNbins, fMinBinPt, fMaxBinPt);
-    fHistJetPtvsCent->GetXaxis()->SetTitle("Centrality (%)");
-    fHistJetPtvsCent->GetYaxis()->SetTitle("#it{p}_{T,jet} (GeV/c)");
-    fOutput->Add(fHistJetPtvsCent);
+  for (auto jetCont : fJetCollArray) {
+    name = TString::Format("%s_fHistRhoVsLeadJetPt", jetCont.first.c_str());
+    fHistRhoVsLeadJetPt[jetCont.first] = new TH2F(name, name, nPtBins, 0, fMaxPt, nRhoBins, 0, maxRho);
+    fHistRhoVsLeadJetPt[jetCont.first]->GetXaxis()->SetTitle("#it{p}_{T,jet} (GeV/c)");
+    fHistRhoVsLeadJetPt[jetCont.first]->GetYaxis()->SetTitle("#rho (GeV/#it{c} #times rad^{-1})");
+    fOutput->Add(fHistRhoVsLeadJetPt[jetCont.first]);
 
-    fHistJetAreavsCent = new TH2F("fHistJetAreavsCent", "fHistJetAreavsCent", 101, -1, 100, 100, 0, 1);
-    fHistJetAreavsCent->GetXaxis()->SetTitle("Centrality (%)");
-    fHistJetAreavsCent->GetYaxis()->SetTitle("Jet area");
-    fOutput->Add(fHistJetAreavsCent);
+    name = TString::Format("%s_fHistLeadJetPtVsCent", jetCont.first.c_str());
+    fHistLeadJetPtVsCent[jetCont.first] = new TH2F(name, name, 100, 0,  100, nPtBins, 0, fMaxPt);
+    fHistLeadJetPtVsCent[jetCont.first]->GetXaxis()->SetTitle("Centrality (%)");
+    fHistLeadJetPtVsCent[jetCont.first]->GetYaxis()->SetTitle("#it{p}_{T,jet} (GeV/c)");
+    fOutput->Add(fHistLeadJetPtVsCent[jetCont.first]);
 
-    fHistJetRhovsCent = new TH2F("fHistJetRhovsCent", "fHistJetRhovsCent", 101, -1, 100, fNbins, fMinBinPt, fMaxBinPt);
-    fHistJetRhovsCent->GetXaxis()->SetTitle("Centrality (%)");
-    fHistJetRhovsCent->GetYaxis()->SetTitle("Jet #rho (GeV/c)");
-    fOutput->Add(fHistJetRhovsCent);
+    name = TString::Format("%s_fHistLeadJetPtDensityVsCent", jetCont.first.c_str());
+    fHistLeadJetPtDensityVsCent[jetCont.first] = new TH2F(name, name, 100, 0,  100, nPtBins, 0, fMaxPt*2);
+    fHistLeadJetPtDensityVsCent[jetCont.first]->GetXaxis()->SetTitle("Centrality (%)");
+    fHistLeadJetPtDensityVsCent[jetCont.first]->GetYaxis()->SetTitle("#it{p}_{T,jet} / #it{A}_{jet} (GeV/#it{c})");
+    fOutput->Add(fHistLeadJetPtDensityVsCent[jetCont.first]);
 
-    fHistNjetvsCent = new TH2F("fHistNjetvsCent",  "fHistNjetvsCent", 101, -1, 100, 150, -0.5, 149.5);
-    fHistNjetvsCent->GetXaxis()->SetTitle("Centrality (%)");
-    fHistNjetvsCent->GetYaxis()->SetTitle("No. of jets");
-    fOutput->Add(fHistNjetvsCent);
+    name = TString::Format("%s_fHistLeadJetNconstVsCent", jetCont.first.c_str());
+    fHistLeadJetNconstVsCent[jetCont.first] = new TH2F(name, name, 100, 0,  100, 150, -0.5, 149.5);
+    fHistLeadJetNconstVsCent[jetCont.first]->GetXaxis()->SetTitle("Centrality (%)");
+    fHistLeadJetNconstVsCent[jetCont.first]->GetYaxis()->SetTitle("No. of constituents");
+    fOutput->Add(fHistLeadJetNconstVsCent[jetCont.first]);
 
-
-    if (fParticleCollArray.size() > 0) {
-      fHistJetPtvsNtrack = new TH2F("fHistJetPtvsNtrack", "fHistJetPtvsNtrack", 150, Ntrackrange[0], Ntrackrange[1], fNbins, fMinBinPt, fMaxBinPt);
-      fHistJetPtvsNtrack->GetXaxis()->SetTitle("No. of tracks");
-      fHistJetPtvsNtrack->GetYaxis()->SetTitle("#it{p}_{T,jet} (GeV/c)");
-      fOutput->Add(fHistJetPtvsNtrack);
-
-      fHistJetAreavsNtrack = new TH2F("fHistJetAreavsNtrack", "fHistJetAreavsNtrack", 150, Ntrackrange[0], Ntrackrange[1], 100, 0, 1);
-      fHistJetAreavsNtrack->GetXaxis()->SetTitle("No. of tracks");
-      fHistJetAreavsNtrack->GetYaxis()->SetTitle("Jet area");
-      fOutput->Add(fHistJetAreavsNtrack);
-
-      fHistNjetvsNtrack = new TH2F("fHistNjetvsNtrack", "fHistNjetvsNtrack", 150, Ntrackrange[0], Ntrackrange[1], 150, -0.5, 149.5);
-      fHistNjetvsNtrack->GetXaxis()->SetTitle("No. of tracks");
-      fHistNjetvsNtrack->GetYaxis()->SetTitle("No. of jets");
-      fOutput->Add(fHistNjetvsNtrack);
+    if (fCentBins.size() > 1) {
+      fHistLeadJetNconstVsPt[jetCont.first] = new TH2*[fCentBins.size()-1];
+      for (Int_t i = 0; i < fCentBins.size()-1; i++) {
+        name = TString::Format("%s_fHistJetNconstVsPt_Cent%d_%d", jetCont.first.c_str(), TMath::FloorNint(fCentBins[i]), TMath::FloorNint(fCentBins[i+1]));
+        fHistLeadJetNconstVsPt[jetCont.first][i] = new TH2F(name, name, nPtBins, 0, fMaxPt, 150, -0.5, 149.5);
+        fHistLeadJetNconstVsPt[jetCont.first][i]->GetXaxis()->SetTitle("#it{p}_{T,jet} (GeV/#it{c})");
+        fHistLeadJetNconstVsPt[jetCont.first][i]->GetYaxis()->SetTitle("No. of constituents");
+        fOutput->Add(fHistLeadJetNconstVsPt[jetCont.first][i]);
+      }
     }
 
+    name = TString::Format("%s_fHistTotJetAreaVsCent", jetCont.first.c_str());
+    fHistTotJetAreaVsCent[jetCont.first] = new TH2F(name, name, 100, 0, 100, 500, 0, 15);
+    fHistTotJetAreaVsCent[jetCont.first]->GetXaxis()->SetTitle("Centrality (%)");
+    fHistTotJetAreaVsCent[jetCont.first]->GetYaxis()->SetTitle("Jet area");
+    fOutput->Add(fHistTotJetAreaVsCent[jetCont.first]);
 
-    TString name;
-    for (Int_t i = 0; i < 4; i++) {
-      name = Form("fHistJetNconstVsPt_%d",i);
-      fHistJetNconstVsPt[i] = new TH2F(name, name, 150, -0.5, 149.5, fNbins, fMinBinPt, fMaxBinPt);
-      fHistJetNconstVsPt[i]->GetXaxis()->SetTitle("No. of constituents");
-      fHistJetNconstVsPt[i]->GetYaxis()->SetTitle("p_{T,jet} (GeV/c)");
-      fOutput->Add(fHistJetNconstVsPt[i]);
+    name = TString::Format("%s_fHistNjetVsCent", jetCont.first.c_str());
+    fHistNjetVsCent[jetCont.first] = new TH2F(name, name, 100, 0, 100, 150, -0.5, 149.5);
+    fHistNjetVsCent[jetCont.first]->GetXaxis()->SetTitle("Centrality (%)");
+    fHistNjetVsCent[jetCont.first]->GetYaxis()->SetTitle("No. of jets");
+    fOutput->Add(fHistNjetVsCent[jetCont.first]);
 
-      name = Form("fHistJetRhovsEta_%d",i);
-      fHistJetRhovsEta[i] = new TH2F(name, name, fNbins, fMinBinPt, fMaxBinPt, 16, -0.8, 0.8);
-      fHistJetRhovsEta[i]->GetXaxis()->SetTitle("#rho (GeV/c * rad^{-1})");
-      fHistJetRhovsEta[i]->GetYaxis()->SetTitle("#eta");
-      fOutput->Add(fHistJetRhovsEta[i]);
+    if (fParticleCollArray.size() > 0) {
+      name = TString::Format("%s_fHistNjetVsNtrack", jetCont.first.c_str());
+      fHistNjetVsNtrack[jetCont.first] = new TH2F(name, name, 200, 0, maxTracks, 150, -0.5, 149.5);
+      fHistNjetVsNtrack[jetCont.first]->GetXaxis()->SetTitle("No. of tracks");
+      fHistNjetVsNtrack[jetCont.first]->GetYaxis()->SetTitle("No. of jets");
+      fOutput->Add(fHistNjetVsNtrack[jetCont.first]);
     }
   }
 
   if (fScaleFunction) {
-    fHistRhoScaledvsCent = new TH2F("fHistRhoScaledvsCent", "fHistRhoScaledvsCent", 101, -1, 100, fNbins, fMinBinPt , fMaxBinPt);
-    fHistRhoScaledvsCent->GetXaxis()->SetTitle("Centrality (%)");
-    fHistRhoScaledvsCent->GetYaxis()->SetTitle("#rho_{scaled} (GeV/c * rad^{-1})");
-    fOutput->Add(fHistRhoScaledvsCent);
+    fHistRhoScaledVsCent = new TH2F("fHistRhoScaledVsCent", "fHistRhoScaledVsCent", 100, 0, 100, nRhoBins, 0, maxRho);
+    fHistRhoScaledVsCent->GetXaxis()->SetTitle("Centrality (%)");
+    fHistRhoScaledVsCent->GetYaxis()->SetTitle("#rho_{scaled} (GeV/#it{c} #times rad^{-1})");
+    fOutput->Add(fHistRhoScaledVsCent);
 
     if (fParticleCollArray.size() > 0) {
-      fHistRhoScaledvsNtrack = new TH2F("fHistRhoScaledvsNtrack", "fHistRhoScaledvsNtrack", 150, Ntrackrange[0], Ntrackrange[1], fNbins, fMinBinPt, fMaxBinPt);
-      fHistRhoScaledvsNtrack->GetXaxis()->SetTitle("No. of tracks");
-      fHistRhoScaledvsNtrack->GetYaxis()->SetTitle("#rho (GeV/c * rad^{-1})");
-      fOutput->Add(fHistRhoScaledvsNtrack);
+      fHistRhoScaledVsNtrack = new TH2F("fHistRhoScaledVsNtrack", "fHistRhoScaledVsNtrack", 200, 0, maxTracks, nRhoBins, 0, maxRho);
+      fHistRhoScaledVsNtrack->GetXaxis()->SetTitle("No. of tracks");
+      fHistRhoScaledVsNtrack->GetYaxis()->SetTitle("#rho (GeV/#it{c} #times rad^{-1})");
+      fOutput->Add(fHistRhoScaledVsNtrack);
     }
 
     if (fClusterCollArray.size() > 0) {
-      fHistRhoScaledvsNcluster = new TH2F("fHistRhoScaledvsNcluster", "fHistRhoScaledvsNcluster", 50, 0, 1500, fNbins, fMinBinPt, fMaxBinPt);
-      fHistRhoScaledvsNcluster->GetXaxis()->SetTitle("No. of clusters");
-      fHistRhoScaledvsNcluster->GetYaxis()->SetTitle("#rho_{scaled} (GeV/c * rad^{-1})");
-      fOutput->Add(fHistRhoScaledvsNcluster);
+      fHistRhoScaledVsNcluster = new TH2F("fHistRhoScaledVsNcluster", "fHistRhoScaledVsNcluster", 50, 0, maxTracks / 4, nRhoBins, 0, maxRho);
+      fHistRhoScaledVsNcluster->GetXaxis()->SetTitle("No. of clusters");
+      fHistRhoScaledVsNcluster->GetYaxis()->SetTitle("#rho_{scaled} (GeV/#it{c} #times rad^{-1})");
+      fOutput->Add(fHistRhoScaledVsNcluster);
     }
   }
+}
+
+
+/**
+ * Calculates the average background using a given parametrization
+ * as a function of centrality.
+ */
+void AliAnalysisTaskRhoBaseDev::CalculateRho()
+{
+  Double_t rho = GetRhoFactor(fCent);
+  fOutRho->SetVal(rho);
 }
 
 /**
@@ -226,11 +285,15 @@ void AliAnalysisTaskRhoBaseDev::UserCreateOutputObjects()
  */
 Bool_t AliAnalysisTaskRhoBaseDev::Run()
 {
-  Double_t rho = GetRhoFactor(fCent);
-  fOutRho->SetVal(rho);
+  fOutRho->SetVal(0);
+  if (fOutRhoScaled) fOutRhoScaled->SetVal(0);
+
+  CalculateEventProperties();
+
+  CalculateRho();
 
   if (fScaleFunction) {
-    Double_t rhoScaled = rho * GetScaleFactor(fCent);
+    Double_t rhoScaled = fOutRho->GetVal() * GetScaleFactor(fCent);
     fOutRhoScaled->SetVal(rhoScaled);
   }
 
@@ -242,44 +305,43 @@ Bool_t AliAnalysisTaskRhoBaseDev::Run()
  */
 Bool_t AliAnalysisTaskRhoBaseDev::FillHistograms()
 {
-  Int_t Ntracks   = 0;
-  Int_t Nclusters = 0;
-  Int_t NjetAcc   = 0;
+  fHistRhoVsCent->Fill(fCent, fOutRho->GetVal());
 
-  // Loop over all possible containers
-  for (auto partCont : fParticleCollArray) {
-    Ntracks += partCont.second->GetNAcceptedParticles();
-  }
-  for (auto clusCont : fClusterCollArray) {
-    Nclusters += clusCont.second->GetNAcceptedClusters();
+  if (fLeadingParticle) {
+    fHistLeadTrackPtVsCent->Fill(fCent, fLeadingParticle->Pt());
+    fHistRhoVsLeadTrackPt->Fill(fLeadingParticle->Pt(), fOutRho->GetVal());
   }
 
-  AliJetContainer* jetCont = fJetCollArray["Background"];
-  for (auto jet : jetCont->accepted()) {
-    fHistJetPtvsCent->Fill(fCent, jet->Pt());
-    fHistJetAreavsCent->Fill(fCent, jet->Area());
-    fHistJetRhovsCent->Fill(fCent, jet->Pt() / jet->Area());
-    fHistJetRhovsEta[fCentBin]->Fill(jet->Pt() / jet->Area(), jet->Eta());
-
-    if (fHistJetPtvsNtrack) fHistJetPtvsNtrack->Fill(Ntracks, jet->Pt());
-    if (fHistJetAreavsNtrack) fHistJetAreavsNtrack->Fill(Ntracks, jet->Area());
-
-    fHistJetNconstVsPt[fCentBin]->Fill(jet->GetNumberOfConstituents(), jet->Pt());
-    NjetAcc++;
+  if (fLeadingCluster) {
+    fHistLeadClusterEVsCent->Fill(fCent, fLeadingCluster->E());
+    fHistRhoVsLeadClusterE->Fill(fLeadingCluster->E(), fOutRho->GetVal());
   }
 
-  if (fHistNjetvsCent) fHistNjetvsCent->Fill(fCent, NjetAcc);
-  if (fHistNjetvsNtrack) fHistNjetvsNtrack->Fill(Ntracks, NjetAcc);
+  if (fHistNtrackVsCent) fHistNtrackVsCent->Fill(fCent, fNtracks);
+  if (fHistNclusterVsCent) fHistNclusterVsCent->Fill(fCent, fNclusters);
 
-  fHistRhovsCent->Fill(fCent, fOutRho->GetVal());
 
-  if (fHistRhovsNtrack) fHistRhovsNtrack->Fill(Ntracks, fOutRho->GetVal());
-  if (fHistRhovsNcluster) fHistRhovsNcluster->Fill(Nclusters, fOutRho->GetVal());
+  if (fHistRhoVsNtrack) fHistRhoVsNtrack->Fill(fNtracks, fOutRho->GetVal());
+  if (fHistRhoVsNcluster) fHistRhoVsNcluster->Fill(fNclusters, fOutRho->GetVal());
 
   if (fOutRhoScaled) {
-    fHistRhoScaledvsCent->Fill(fCent, fOutRhoScaled->GetVal());
-    if (fHistRhoScaledvsNtrack) fHistRhoScaledvsNtrack->Fill(Ntracks, fOutRhoScaled->GetVal());
-    if (fHistRhoScaledvsNcluster) fHistRhoScaledvsNcluster->Fill(Nclusters,  fOutRhoScaled->GetVal());
+    fHistRhoScaledVsCent->Fill(fCent, fOutRhoScaled->GetVal());
+    if (fHistRhoScaledVsNtrack) fHistRhoScaledVsNtrack->Fill(fNtracks, fOutRhoScaled->GetVal());
+    if (fHistRhoScaledVsNcluster) fHistRhoScaledVsNcluster->Fill(fNclusters,  fOutRhoScaled->GetVal());
+  }
+
+  for (auto jetCont : fJetCollArray) {
+    fHistTotJetAreaVsCent[jetCont.first]->Fill(fCent, fTotJetArea[jetCont.first]);
+    if (fLeadingJet[jetCont.first]) {
+      fHistLeadJetPtVsCent[jetCont.first]->Fill(fCent, fLeadingJet[jetCont.first]->Pt());
+      fHistLeadJetPtDensityVsCent[jetCont.first]->Fill(fCent, fLeadingJet[jetCont.first]->Pt() / fLeadingJet[jetCont.first]->Area());
+      fHistLeadJetNconstVsCent[jetCont.first]->Fill(fCent, fLeadingJet[jetCont.first]->GetNumberOfConstituents());
+      fHistRhoVsLeadJetPt[jetCont.first]->Fill(fLeadingJet[jetCont.first]->Pt(), fOutRho->GetVal());
+      if (fCentBin >=0 && fCentBin < fCentBins.size()-1 && fHistLeadJetNconstVsPt[jetCont.first]) fHistLeadJetNconstVsPt[jetCont.first][fCentBin]->Fill(fLeadingJet[jetCont.first]->Pt(), fLeadingJet[jetCont.first]->GetNumberOfConstituents());
+    }
+    if (fHistNjetVsCent[jetCont.first]) fHistNjetVsCent[jetCont.first]->Fill(fCent, fNjets[jetCont.first]);
+
+    if (fHistNjetVsNtrack[jetCont.first]) fHistNjetVsNtrack[jetCont.first]->Fill(fNtracks, fNjets[jetCont.first]);
   }
 
   return kTRUE;
@@ -315,6 +377,8 @@ void AliAnalysisTaskRhoBaseDev::ExecOnce()
       }
     }
   }
+
+  fTaskConfigured = VerifyContainers();
 
   AliAnalysisTaskEmcalJetLight::ExecOnce();
 }

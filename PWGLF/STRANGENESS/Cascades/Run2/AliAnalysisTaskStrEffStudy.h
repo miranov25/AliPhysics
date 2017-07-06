@@ -120,6 +120,10 @@ public:
     void SetExtraCleanup ( Bool_t lExtraCleanup = kTRUE) {
         fkExtraCleanup = lExtraCleanup;
     }
+    void SetSaveGoodTracks ( Bool_t lOpt = kTRUE) {
+        fkSaveGoodTracks = lOpt;
+    }
+
 //---------------------------------------------------------------------------------------
     void SetUseExtraEvSels ( Bool_t lUseExtraEvSels = kTRUE) {
         fkDoExtraEvSels = lUseExtraEvSels;
@@ -204,6 +208,13 @@ public:
         fLambdaMassSigma[1] = 2.89679e-04;
         fLambdaMassSigma[2] = 1.52661e-03;
         fLambdaMassSigma[3] =-2.58251e+00;
+    }
+    //---------------------------------------------------------------------------------------
+    void SetPrecisionCutoffCascadeDCA     ( Double_t lPrecision ) {
+        fPrecisionCutoffCascadeDCA = lPrecision;
+    }
+    void SetMaxIterationsCascadeDCA     ( Int_t lMaxIter ) {
+        fMaxIterationsCascadeDCA = lMaxIter;
     }
     //---------------------------------------------------------------------------------------
     //Superlight mode: add another configuration, please
@@ -306,6 +317,9 @@ private:
     Bool_t    fkUseLightVertexer;       // if true, use AliLightVertexers instead of regular ones
     Bool_t    fkDoV0Refit;              // if true, will invoke AliESDv0::Refit() to improve precision
     Bool_t    fkExtraCleanup;           //if true, perform pre-rejection of useless candidates before going through configs
+    
+    //Save only decent tracks
+    Bool_t fkSaveGoodTracks;
 
     AliVEvent::EOfflineTriggerTypes fTrigType; // trigger type
 
@@ -317,6 +331,9 @@ private:
 
     Double_t fLambdaMassSigma[4]; //Array to store the lambda mass sigma parametrization
     //[0]+[1]*x+[2]*TMath::Exp([3]*x)
+    
+    Double_t fPrecisionCutoffCascadeDCA; //Precision cutoff for GetDCA numerical recipe
+    Int_t fMaxIterationsCascadeDCA; //Max N Iter for cascade DCA calculation
 
 //===========================================================================================
 //   Variables for Event Tree
@@ -376,6 +393,10 @@ private:
 //===========================================================================================
 //   Variables for Cascade Candidate Tree
 //===========================================================================================
+    Float_t fTreeCascVarCentrality;
+    Int_t fTreeCascVarPosSign;
+    Int_t fTreeCascVarNegSign;
+    Int_t fTreeCascVarBachSign;
     Float_t fTreeCascVarPosLength;
     Float_t fTreeCascVarNegLength;
     Float_t fTreeCascVarBachLength;
@@ -401,8 +422,12 @@ private:
     Float_t fTreeCascVarV0DecayX;
     Float_t fTreeCascVarV0DecayY;
     Float_t fTreeCascVarV0DecayZ;
+    Float_t fTreeCascVarV0DecayXMC;
+    Float_t fTreeCascVarV0DecayYMC;
+    Float_t fTreeCascVarV0DecayZMC;
     Float_t fTreeCascVarV0CosineOfPointingAngle;
     Float_t fTreeCascVarDCAV0ToPrimVtx;
+    Float_t fTreeCascVarDCAxyV0ToPrimVtx;
     Float_t fTreeCascVarInvMassLambda;
     Float_t fTreeCascVarInvMassAntiLambda;
     
@@ -412,20 +437,15 @@ private:
     Float_t fTreeCascVarDecayX;
     Float_t fTreeCascVarDecayY;
     Float_t fTreeCascVarDecayZ;
+    Float_t fTreeCascVarDecayXMC;
+    Float_t fTreeCascVarDecayYMC;
+    Float_t fTreeCascVarDecayZMC;
     Float_t fTreeCascVarCascCosPointingAngle;
     
     Float_t fTreeCascVarInvMassXiMinus;
     Float_t fTreeCascVarInvMassXiPlus;
     Float_t fTreeCascVarInvMassOmegaMinus;
     Float_t fTreeCascVarInvMassOmegaPlus;
-    
-    Int_t fTreeCascVarPIDPositive;
-    Int_t fTreeCascVarPIDNegative;
-    Int_t fTreeCascVarPIDBachelor;
-    //Set tree variables
-    Int_t fTreeCascVarPID;
-    Float_t fTreeCascVarPtMC;
-    Float_t fTreeCascVarRapMC;
     
     Int_t fTreeCascVarCascPropagationImprovedIterations;
     Int_t fTreeCascVarCascPropagationImprovedStatus;
@@ -435,12 +455,51 @@ private:
     Float_t fTreeCascVarImprovedDecayY;
     Float_t fTreeCascVarImprovedDecayZ;
     Float_t fTreeCascVarImprovedCascCosPointingAngle;
+    Float_t fTreeCascVarImprovedCascDCAxyToPV;
+    Float_t fTreeCascVarImprovedCascDCAzToPV;
     
     Float_t fTreeCascVarImprovedInvMassXiMinus;
     Float_t fTreeCascVarImprovedInvMassXiPlus;
     Float_t fTreeCascVarImprovedInvMassOmegaMinus;
     Float_t fTreeCascVarImprovedInvMassOmegaPlus;
     
+    Int_t fTreeCascVarPIDPositive;
+    Int_t fTreeCascVarPIDNegative;
+    Int_t fTreeCascVarPIDBachelor;
+    //Set tree variables
+    Int_t fTreeCascVarPID;
+    Float_t fTreeCascVarPtMC;
+    Float_t fTreeCascVarRapMC;
+    
+    //Super-control vars
+    Float_t fTreeCascVarPosDistanceToTrueDecayPt;
+    Float_t fTreeCascVarNegDistanceToTrueDecayPt;
+    Float_t fTreeCascVarBachDistanceToTrueDecayPt;
+    Float_t fTreeCascVarV0DistanceToTrueDecayPt;
+    
+    //DCA propagation control distances
+    Float_t fTreeCascVarBachPropagationParameterClassical;
+    Float_t fTreeCascVarBachPropagationParameterImproved;
+    
+    Float_t fTreeCascVarNegPx; //!
+    Float_t fTreeCascVarNegPy; //!
+    Float_t fTreeCascVarNegPz; //!
+    Float_t fTreeCascVarPosPx; //!
+    Float_t fTreeCascVarPosPy; //!
+    Float_t fTreeCascVarPosPz; //!
+    Float_t fTreeCascVarBachPx; //!
+    Float_t fTreeCascVarBachPy; //!
+    Float_t fTreeCascVarBachPz; //!
+    
+    Float_t fTreeCascVarNegPxMC; //!
+    Float_t fTreeCascVarNegPyMC; //!
+    Float_t fTreeCascVarNegPzMC; //!
+    Float_t fTreeCascVarPosPxMC; //!
+    Float_t fTreeCascVarPosPyMC; //!
+    Float_t fTreeCascVarPosPzMC; //!
+    Float_t fTreeCascVarBachPxMC; //!
+    Float_t fTreeCascVarBachPyMC; //!
+    Float_t fTreeCascVarBachPzMC; //!
 
 //===========================================================================================
 //   Histograms

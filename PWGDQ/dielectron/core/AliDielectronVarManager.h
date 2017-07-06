@@ -585,6 +585,7 @@ public:
     // Flow estimators for measured Jpsis
 
     kQnDeltaPhiTPCrpH2,
+    kQnDeltaPhiTrackTPCrpH2, // Track delta phi for cross-checks
     kQnDeltaPhiV0ArpH2,
     kQnDeltaPhiV0CrpH2,
     kQnDeltaPhiV0rpH2,
@@ -977,8 +978,7 @@ inline void AliDielectronVarManager::FillVarESDtrack(const AliESDtrack *particle
       // Fill distance of primary vertex to secondary vertex (as an alternative to the IP)
       // Pure MC variable by intention, no reconstucted value filled.
       if (Req(kDistPrimToSecVtxXYMC) || Req(kDistPrimToSecVtxZMC)) {
-        values[AliDielectronVarManager::kDistPrimToSecVtxXYMC] = TMath::Sqrt(  TMath::Power(MCpart->Xv() - values[AliDielectronVarManager::kXvPrimMCtruth],2)
-                                                                             + TMath::Power(MCpart->Yv() - values[AliDielectronVarManager::kYvPrimMCtruth],2));
+        values[AliDielectronVarManager::kDistPrimToSecVtxXYMC] = TMath::Sqrt(  TMath::Power(MCpart->Xv() - values[AliDielectronVarManager::kXvPrimMCtruth],2) + TMath::Power(MCpart->Yv() - values[AliDielectronVarManager::kYvPrimMCtruth],2));
         values[AliDielectronVarManager::kDistPrimToSecVtxZMC] = TMath::Abs(MCpart->Zv() - values[AliDielectronVarManager::kZvPrimMCtruth]);
       }
     }
@@ -1145,16 +1145,17 @@ inline void AliDielectronVarManager::FillVarAODTrack(const AliAODTrack *particle
   FillVarVParticle(particle, values);
   Double_t tpcNcls=particle->GetTPCNcls();
 
+  if(Req(kQnDeltaPhiTrackTPCrpH2))   values[AliDielectronVarManager::kQnDeltaPhiTrackTPCrpH2]  = TVector2::Phi_mpi_pi(values[AliDielectronVarManager::kPhi] - values[AliDielectronVarManager::kQnTPCrpH2]);
   //GetNclsS not present in AODtrack
   //Replace with method as soon as available
   TBits tpcSharedMap = particle->GetTPCSharedMap();
   Double_t tpcNclsS=  tpcSharedMap.CountBits(0)-tpcSharedMap.CountBits(159);
 
   // Reset AliESDtrack interface specific information
-  if(Req(kNclsITS))      values[AliDielectronVarManager::kNclsITS]       = particle->GetITSNcls();
+  if(Req(kNclsITS) || Req(kNclsSFracITS))      values[AliDielectronVarManager::kNclsITS]       = particle->GetITSNcls();
   if(Req(kITSchi2Cl))    values[AliDielectronVarManager::kITSchi2Cl]     = (particle->GetITSNcls()>0)? particle->GetITSchi2() / particle->GetITSNcls() : 0;
-  if(Req(kNclsTPC))      values[AliDielectronVarManager::kNclsTPC]       = tpcNcls;
-  if(Req(kNclsSTPC))     values[AliDielectronVarManager::kNclsSTPC]      = tpcNclsS;
+  if(Req(kNclsTPC) || Req(kNclsSFracTPC))      values[AliDielectronVarManager::kNclsTPC]       = tpcNcls;
+  if(Req(kNclsSTPC) || Req(kNclsSFracTPC))     values[AliDielectronVarManager::kNclsSTPC]      = tpcNclsS;
   if(Req(kNclsSFracTPC)) values[AliDielectronVarManager::kNclsSFracTPC]  = tpcNcls>0?tpcNclsS/tpcNcls:0;
   if(Req(kNclsTPCiter1)) values[AliDielectronVarManager::kNclsTPCiter1]  = tpcNcls; // not really available in AOD
   if(Req(kNFclsTPC)  || Req(kNFclsTPCfCross))  values[AliDielectronVarManager::kNFclsTPC]      = particle->GetTPCNclsF();
@@ -1167,6 +1168,15 @@ inline void AliDielectronVarManager::FillVarAODTrack(const AliAODTrack *particle
   if(Req(kTRDchi2))        values[AliDielectronVarManager::kTRDchi2]       = (particle->GetTRDntrackletsPID()!=0.?particle->GetTRDchi2():-1);
   if(Req(kTRDchi2Trklt))   values[AliDielectronVarManager::kTRDchi2Trklt]  = (particle->GetTRDntrackletsPID()>0 ? particle->GetTRDchi2() / particle->GetTRDntrackletsPID() : -1.);
   if(Req(kTRDsignal))      values[AliDielectronVarManager::kTRDsignal]     = particle->GetTRDsignal();
+
+  if(Req(kNclsSITS) || Req(kNclsSFracITS)){
+    Double_t itsNclsS = 0.;
+    for(int i=0; i<6; i++){
+      if( particle->HasSharedPointOnITSLayer(i) ) itsNclsS ++;
+    }
+    values[AliDielectronVarManager::kNclsSITS]     = itsNclsS;
+    if(Req(kNclsSFracITS)) values[AliDielectronVarManager::kNclsSFracITS] = itsNclsS > 0. ? itsNclsS / particle->GetITSNcls() : 0.;
+  }
 
 
   TBits tpcClusterMap = particle->GetTPCClusterMap();
@@ -2410,6 +2420,11 @@ inline void AliDielectronVarManager::FillVarVEvent(const AliVEvent *event, Doubl
     AliQnCorrectionsManager *flowQnVectorMgr = flowQnVectorTask->GetAliQnCorrectionsManager();
     TList *qnlist = flowQnVectorMgr->GetQnVectorList();
     if(qnlist != NULL)  AliDielectronVarManager::FillQnEventplanes(qnlist, values);
+    else{
+      for (Int_t i = AliDielectronVarManager::kQnTPCrpH2; i <= AliDielectronVarManager::kQnCorrFMDAy_FMDCy; i++) {
+        values[i] = -999.;
+      }
+    }
   }
 
   // ep angle interval [todo, fill]
@@ -2753,7 +2768,7 @@ inline void AliDielectronVarManager::FillVarAODEvent(const AliAODEvent *event, D
     // TPC
 
     TList *qnlist = (TList*) event->FindListObject("qnVectorList");
-    if(Req(kQnTPCrpH2) && qnlist ==NULL){
+    if((Req(kQnTPCrpH2) || Req(kQnV0rpH2)) && qnlist == NULL){
       for (Int_t i = AliDielectronVarManager::kQnTPCrpH2; i <= AliDielectronVarManager::kQnCorrFMDAy_FMDCy; i++) {
         values[i] = -999.;
       }

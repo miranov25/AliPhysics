@@ -1,9 +1,6 @@
 #ifndef ALICALOPHOTONCUTS_H
 #define ALICALOPHOTONCUTS_H
 
-// Class handling all kinds of selection cuts for Gamma Calo analysis
-// Authors: Friederike Bock, Daniel Muehlheim
-
 #include "AliConversionPhotonBase.h"
 #include "AliAODConversionMother.h"
 #include "AliAODTrack.h"
@@ -41,7 +38,40 @@ class TList;
 class AliAnalysisManager;
 class AliAODMCParticle;
 
-using namespace std;
+
+/**
+ * @class AliCaloPhotonCuts
+ * @brief Class handling all kinds of selection cuts for Gamma Calo analysis
+ * @author Friederike Bock
+ * @author Daniel Muehlheim
+ * @ingroup GammaConv
+ *
+ * The cut configuration is set as a string with an 19 digit number.
+ * Each digit in the string corresponds to a certain cut type, while
+ * its values represent the cut values. The cut configuration is listed here:
+ *
+ * | Position in the cut string (from the end) | Cut type               |
+ * |-------------------------------------------|------------------------|
+ * |                  0                        | Cluster Type           |
+ * |                  1                        | Eta Min                | 
+ * |                  2                        | Eta Max                |
+ * |                  3                        | Phi Min                |
+ * |                  4                        | Phi Max                |
+ * |                  5                        | NonLinearity1          |
+ * |                  6                        | NonLinearity2          |
+ * |                  7                        | DistanceToBadChannel   |
+ * |                  8                        | Timing                 |
+ * |                  9                        | TrackMatching          |
+ * |                  10                       | ExoticCluster          |
+ * |                  11                       | MinEnergy              |
+ * |                  12                       | MinNCells              |
+ * |                  13                       | MinM02                 |
+ * |                  14                       | MaxM02                 |
+ * |                  15                       | MinM20                 |
+ * |                  16                       | MaxM20                 | 
+ * |                  17                       | MaximumDispersion      |
+ * |                  18                       | NML                    |
+*/
 
 class AliCaloPhotonCuts : public AliAnalysisCuts {
     
@@ -145,7 +175,7 @@ class AliCaloPhotonCuts : public AliAnalysisCuts {
     
     //handeling of CutString
     static const char * fgkCutNames[kNCuts];
-    Bool_t      SetCutIds(TString cutString); 
+    Bool_t      SetCutIds(TString cutString);  
     Int_t       fCuts[kNCuts];
     Bool_t      SetCut(cutIds cutID, Int_t cut);
     Bool_t      UpdateCutString();

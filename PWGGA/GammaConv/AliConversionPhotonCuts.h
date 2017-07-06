@@ -35,8 +35,43 @@ class TList;
 class AliAnalysisManager;
 class AliAODMCParticle;
 
+/***
+ * @class AliConversionPhotonCuts
+ * @ingroup GammaConv
+ *
+ * The cut configuration is set as a string with an 19 digit number.
+ * Each digit in the string corresponds to a certain cut type, while
+ * its values represent the cut values. The cut configuration is listed here:
+ *
+ * | Position in the cut string (from the end) | Cut type               |
+ * |                  0                        | V0FinderType           |
+ * |                  1                        | EtaCut                 | 
+ * |                  2                        | MinRCut                |
+ * |                  3                        | EtaForPhiCut           |
+ * |                  4                        | MinPhiCut              |
+ * |                  5                        | MaxPhiCut              |
+ * |                  6                        | SinglePtCut            |
+ * |                  7                        | ClsTPCCut              |
+ * |                  8                        | ededxSigmaCut          |
+ * |                  9                        | pidedxSigmaCut         |
+ * |                  10                       | piMomdedxSigmaCut      |
+ * |                  11                       | piMaxMomdedxSigmaCut   |
+ * |                  12                       | LowPRejectionSigmaCut  |
+ * |                  13                       | TOFelectronPID         |
+ * |                  14                       | ITSelectronPID         |
+ * |                  15                       | TRDelectronPID         |
+ * |                  16                       | QtMaxCut               | 
+ * |                  17                       | Chi2GammaCut           |
+ * |                  18                       | PsiPair                |
+ * |                  19                       | DoPhotonAsymmetryCut   |
+ * |                  20                       | CosinePointingAngle    |
+ * |                  21                       | SharedElectronCuts     |
+ * |                  22                       | RejectToCloseV0s       |
+ * |                  23                       | DcaRPrimVtx            |
+ * |                  24                       | DcaZPrimVtx            |
+ * |                  25                       | EvetPlane              |
+*/
 
-using namespace std;
 
 class AliConversionPhotonCuts : public AliAnalysisCuts {
       
@@ -85,7 +120,7 @@ class AliConversionPhotonCuts : public AliAnalysisCuts {
     };
 
 
-    Bool_t SetCutIds(TString cutString); 
+    Bool_t SetCutIds(TString cutString);
     Int_t fCuts[kNCuts];
     Bool_t SetCut(cutIds cutID, Int_t cut);
     Bool_t UpdateCutString();
@@ -235,6 +270,8 @@ class AliConversionPhotonCuts : public AliAnalysisCuts {
     Bool_t            fDoShrinkTPCAcceptance;               // Flag for shrinking the TPC acceptance due to different reasons
     Double_t          fPtCut;                               // pt cut
     Double_t          fSinglePtCut;                         // pt cut for electron/positron
+    Double_t          fSinglePtCut2;                        // second pt cut for electron/positron if asymmetric cut is chosen
+    Bool_t            fDoAsymPtCut;                         // Flag for setting asymmetric pT cut on electron/positron
     Double_t          fMaxZ;                                // z cut
     Double_t          fMinClsTPC;                           // minimum clusters in the TPC
     Double_t          fMinClsTPCToF;                        // minimum clusters to findable clusters
@@ -348,7 +385,7 @@ class AliConversionPhotonCuts : public AliAnalysisCuts {
 
   private:
   
-    ClassDef(AliConversionPhotonCuts,14)
+    ClassDef(AliConversionPhotonCuts,15)
 };
 
 #endif

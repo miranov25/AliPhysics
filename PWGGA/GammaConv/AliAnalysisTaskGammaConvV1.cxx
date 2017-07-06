@@ -228,6 +228,7 @@ AliAnalysisTaskGammaConvV1::AliAnalysisTaskGammaConvV1(): AliAnalysisTaskSE(),
   fHistoNGammaCandidates(NULL),
   fHistoNGoodESDTracksVsNGammaCandidates(NULL),
   fHistoSPDClusterTrackletBackground(NULL),
+  fHistoV0MultVsNumberTPCoutTracks(NULL),
   fHistoNV0Tracks(NULL),
   fHistoEtaShift(NULL),
   tESDMesonsInvMassPtDcazMinDcazMaxFlag(NULL),
@@ -438,6 +439,7 @@ AliAnalysisTaskGammaConvV1::AliAnalysisTaskGammaConvV1(const char *name):
   fHistoNGammaCandidates(NULL),
   fHistoNGoodESDTracksVsNGammaCandidates(NULL),
   fHistoSPDClusterTrackletBackground(NULL),
+  fHistoV0MultVsNumberTPCoutTracks(NULL),
   fHistoNV0Tracks(NULL),
   fHistoEtaShift(NULL),
   tESDMesonsInvMassPtDcazMinDcazMaxFlag(NULL),
@@ -642,6 +644,7 @@ void AliAnalysisTaskGammaConvV1::UserCreateOutputObjects(){
     fHistoNGoodESDTracksVsNGammaCandidates   = new TH2F*[fnCuts];
     fHistoSPDClusterTrackletBackground       = new TH2F*[fnCuts];
   }
+  fHistoV0MultVsNumberTPCoutTracks = new TH2F*[fnCuts];
   fHistoConvGammaPt              = new TH1F*[fnCuts];
   fHistoNV0Tracks                = new TH1F*[fnCuts];
   fHistoEtaShift                 = new TProfile*[fnCuts];
@@ -705,9 +708,9 @@ void AliAnalysisTaskGammaConvV1::UserCreateOutputObjects(){
     fCutFolder[iCut]->Add(fESDList[iCut]);
     
     if(fDoCentralityFlat > 0) 
-      fHistoNEvents[iCut]            = new TH1F("NEventsUnweighted","NEventsUnweighted",13,-0.5,12.5);
+      fHistoNEvents[iCut]            = new TH1F("NEventsUnweighted","NEventsUnweighted",14,-0.5,13.5);
     else 
-      fHistoNEvents[iCut]            = new TH1F("NEvents","NEvents",13,-0.5,12.5);
+      fHistoNEvents[iCut]            = new TH1F("NEvents","NEvents",14,-0.5,13.5);
     fHistoNEvents[iCut]->GetXaxis()->SetBinLabel(1,"Accepted");
     fHistoNEvents[iCut]->GetXaxis()->SetBinLabel(2,"Centrality");
     fHistoNEvents[iCut]->GetXaxis()->SetBinLabel(3,"Miss. MC or inc. ev.");
@@ -727,9 +730,10 @@ void AliAnalysisTaskGammaConvV1::UserCreateOutputObjects(){
     fHistoNEvents[iCut]->GetXaxis()->SetBinLabel(11,"rejectedForJetJetMC");
     fHistoNEvents[iCut]->GetXaxis()->SetBinLabel(12,"SPD hits vs tracklet");
     fHistoNEvents[iCut]->GetXaxis()->SetBinLabel(13,"Out-of-Bunch pileup Past-Future");
+    fHistoNEvents[iCut]->GetXaxis()->SetBinLabel(14,"Pileup V0M-TPCout Tracks");
     fESDList[iCut]->Add(fHistoNEvents[iCut]);
     if (fIsMC > 1){
-      fHistoNEventsWOWeight[iCut]    = new TH1F("NEventsWOWeight","NEventsWOWeight",13,-0.5,12.5);
+      fHistoNEventsWOWeight[iCut]    = new TH1F("NEventsWOWeight","NEventsWOWeight",14,-0.5,13.5);
       fHistoNEventsWOWeight[iCut]->GetXaxis()->SetBinLabel(1,"Accepted");
       fHistoNEventsWOWeight[iCut]->GetXaxis()->SetBinLabel(2,"Centrality");
       fHistoNEventsWOWeight[iCut]->GetXaxis()->SetBinLabel(3,"Miss. MC or inc. ev.");
@@ -749,6 +753,7 @@ void AliAnalysisTaskGammaConvV1::UserCreateOutputObjects(){
       fHistoNEventsWOWeight[iCut]->GetXaxis()->SetBinLabel(11,"rejectedForJetJetMC");
       fHistoNEventsWOWeight[iCut]->GetXaxis()->SetBinLabel(12,"SPD hits vs tracklet");
       fHistoNEventsWOWeight[iCut]->GetXaxis()->SetBinLabel(13,"Out-of-Bunch pileup Past-Future");
+      fHistoNEventsWOWeight[iCut]->GetXaxis()->SetBinLabel(14,"Pileup V0M-TPCout Tracks");
       fESDList[iCut]->Add(fHistoNEventsWOWeight[iCut]);
     }  
     if (fIsMC == 2){  
@@ -759,7 +764,7 @@ void AliAnalysisTaskGammaConvV1::UserCreateOutputObjects(){
       fESDList[iCut]->Add(fhJetJetNTrials[iCut]);
     }
     if(fDoCentralityFlat > 0){  
-      fHistoNEventsWeighted[iCut]        = new TH1F("NEvents","NEvents",13,-0.5,12.5);//weighted histogram!!
+      fHistoNEventsWeighted[iCut]        = new TH1F("NEvents","NEvents",14,-0.5,13.5);//weighted histogram!!
       fHistoNEventsWeighted[iCut]->Sumw2();
       fHistoNEventsWeighted[iCut]->GetXaxis()->SetBinLabel(1,"Accepted");
       fHistoNEventsWeighted[iCut]->GetXaxis()->SetBinLabel(2,"Centrality");
@@ -780,6 +785,7 @@ void AliAnalysisTaskGammaConvV1::UserCreateOutputObjects(){
       fHistoNEventsWeighted[iCut]->GetXaxis()->SetBinLabel(11,"rejectedForJetJetMC");
       fHistoNEventsWeighted[iCut]->GetXaxis()->SetBinLabel(12,"SPD hits vs tracklet");
       fHistoNEventsWeighted[iCut]->GetXaxis()->SetBinLabel(13,"Out-of-Bunch pileup Past-Future");
+      fHistoNEventsWeighted[iCut]->GetXaxis()->SetBinLabel(14,"Pileup V0M-TPCout Tracks");
       fESDList[iCut]->Add(fHistoNEventsWeighted[iCut]);
     }
     
@@ -843,6 +849,16 @@ void AliAnalysisTaskGammaConvV1::UserCreateOutputObjects(){
       if(fDoCentralityFlat > 0) fHistoSPDClusterTrackletBackground[iCut]->Sumw2();
       fESDList[iCut]->Add(fHistoSPDClusterTrackletBackground[iCut]);
     }
+    
+    if(fIsHeavyIon == 1) 
+      fHistoV0MultVsNumberTPCoutTracks[iCut]    = new TH2F("V0Mult vs TPCout Tracks","V0Mult vs TPCout Tracks",500,0,15000,500,0,40000);
+    else if(fIsHeavyIon == 2) 
+      fHistoV0MultVsNumberTPCoutTracks[iCut]    = new TH2F("V0Mult vs TPCout Tracks","V0Mult vs TPCout Tracks",500,0,1000,500,0,2500);
+    else
+      fHistoV0MultVsNumberTPCoutTracks[iCut]    = new TH2F("V0Mult vs TPCout Tracks","V0Mult vs TPCout Tracks",200,0,400,500,0,1500);
+    
+    fESDList[iCut]->Add(fHistoV0MultVsNumberTPCoutTracks[iCut]);
+
     if(fIsHeavyIon == 1) 
       fHistoNV0Tracks[iCut]            = new TH1F("V0 Multiplicity","V0 Multiplicity",30000,0,30000);
     else if(fIsHeavyIon == 2) 
@@ -1733,6 +1749,12 @@ void AliAnalysisTaskGammaConvV1::UserExec(Option_t *)
     
     if(fDoCentralityFlat > 0) fHistoCentralityVsPrimaryTracks[iCut]->Fill(((AliConvEventCuts*)fEventCutArray->At(iCut))->GetCentrality(fInputEvent),fV0Reader->GetNumberOfPrimaryTracks(), fWeightCentrality[iCut]*fWeightJetJetMC);
     else if(fDoPlotVsCentrality) fHistoCentralityVsPrimaryTracks[iCut]->Fill(((AliConvEventCuts*)fEventCutArray->At(iCut))->GetCentrality(fInputEvent),fV0Reader->GetNumberOfPrimaryTracks(), fWeightJetJetMC);
+
+    if(((AliConvEventCuts*)fEventCutArray->At(iCut))->IsHeavyIon() == 2){
+      fHistoV0MultVsNumberTPCoutTracks[iCut]->Fill(fV0Reader->GetNumberOfTPCoutTracks(), fInputEvent->GetVZEROData()->GetMTotV0A()); 
+    } else {
+      fHistoV0MultVsNumberTPCoutTracks[iCut]->Fill(fV0Reader->GetNumberOfTPCoutTracks(), fInputEvent->GetVZEROData()->GetMTotV0A()+fInputEvent->GetVZEROData()->GetMTotV0C()); 
+    } 
 
     if(((AliConvEventCuts*)fEventCutArray->At(iCut))->IsHeavyIon() == 2) fHistoNV0Tracks[iCut]->Fill(fInputEvent->GetVZEROData()->GetMTotV0A(),fWeightJetJetMC);
     else if(fDoCentralityFlat > 0){
