@@ -251,8 +251,11 @@ Bool_t InitTPCMCValidation(TString mcPeriod, TString mcPass, TString anchorPerio
   treeMC->SetAlias("statisticOK","QA.TPC.nEvents>100&&TPC.Anchor.nEvents>0");
   treeMC->SetAlias("present","(run==TPC.Anchor.run)");      // check presence of reference detectors for MC tree
   treeAnchorTPC->SetAlias("present","(run>0)");                                // define present alias for anchor tree
-  TStatToolkit::AddMetadata(treeMC,"QA.TPC.Legend",("MC: "+mcPeriod).Data());
-  TStatToolkit::AddMetadata(treeMC,"TPC.Anchor.Legend",(anchorPeriod+"/"+anchorPass).Data());
+  TStatToolkit::AddMetadata(treeMC,"QA.TPC.Legend",("MC_{TPC}: "+mcPeriod).Data());
+  TStatToolkit::AddMetadata(treeMC,"Logbook.Legend","Logbook");
+  TStatToolkit::AddMetadata(treeMC,"QA.ITS.Legend",("MC_{ITS}: "+mcPeriod).Data());
+  TStatToolkit::AddMetadata(treeMC,"QA.TRD.Legend",("MC_{TRD}: "+mcPeriod).Data());
+  TStatToolkit::AddMetadata(treeMC,"TPC.Anchor.Legend",(anchorPeriod+"_{"+anchorPass+"}").Data());
   // check the match between MC and MC anchor
   {
     Int_t entriesMatch = treeMC->Draw("QA.TPC.meanTPCncl-TPC.Anchor.meanTPCncl", "1");
@@ -723,12 +726,16 @@ void MakeJSROOTHTML(TString prefix, TString outputName){
 /// TODO - Graph rebin to be extended to X,Y,Z
 /// TODO - tooltip/title- to make bullets using UTF printing
 ///
-/// TODO  - make dEdx full QA (Sebastian)
+/// TODO  - make dEdx,dcaz, TPC-TRD eff (together with its) full QA (Sebastian)
 ///      - all status(MC/Anchor, MC, Anchor) plots
-///      - add them to web page = modifying tabdEdx.html
+///      - add them to web page = modifying tabdEdx.html, tabdDCAR.html, tabDCAZ.html tabEff.html
 ///      - add plot for all variables contributing to alarms
+///      - for TRD eff see the variables in treeMC->GetFriend("QA.TRD")->GetListOfBranches()->Print("","*ff*")
+///      - plot is there can be added to the alarms
+///
 /// TOD0  - dcar, dcaz - including fits (currently only resolution)
 ///       - TPC-ITS matching
 ///
 /// TODO - add calibration trending plots and alarms (Marian)
-///      - html
+///      - TStatToolkit::AddMetadata(treeMC,"status2.Legend","TPC ON")
+///      - TStatToolkit::GetMetadata(treeMC,"status2.Legend")->GetTitle()
