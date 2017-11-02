@@ -13,11 +13,15 @@
   TString anchorPass="pass3_lowIR_pidfix";
   AliDrawStyle::SetDefaults();
   AliDrawStyle::ApplyStyle("figTemplate");
-  InitTPCMCValidation("LHC15k1a1","passMC","LHC15o", "pass3_lowIR_pidfix",0,0);
+  //
+  InitTPCMCValidation("LHC15k1a1","passMC","LHC15o", "pass3_lowIR_pidfix",0,0); //short period
+  InitTPCMCValidation("LHC16g1c","passMC","LHC15o", "pass1",0,0);   // long period example
   //
   MakeReport();
   MakeStatusPlots();
   trendingDraw->fReport->Close();
+  //
+
 
 \endcode
 */
@@ -140,17 +144,17 @@ void makeTPCMCAlarms(TTree * treeMC, Bool_t doCheck,Int_t verbose){
     sTrendVars+="QA.TPC.dcaz_posC_0,TPC.Anchor.dcaz_posC_0,0.2,1.0,0.2;";     // dcaz;  warning 0.1 cm; error 0.15 cm  (nominal ~ 0.2 cm)
     sTrendVars+="QA.TPC.dcaz_negC_0,TPC.Anchor.dcaz_negC_0,0.2,1.0,0.2;";     // dcaz;  warning 0.1 cm; error 0.15 cm  (nominal ~ 0.2 cm)
 
-    // Eff ITS: TPC->ITS
-    sTrendVars+="QA.ITS.EffoneSPDPt02,ITS.Anchor.EffoneSPDPt02,0.05,0.1,0.07;";
-    sTrendVars+="QA.ITS.EffoneSPDPt1,ITS.Anchor.EffoneSPDPt1,0.05,0.1,0.07;";
-    sTrendVars+="QA.ITS.EffoneSPDPt10,ITS.Anchor.EffoneSPDPt10,0.05,0.1,0.07;";
-    sTrendVars+="QA.ITS.EffTOTPt02,ITS.Anchor.EffTOTPt02,0.05,0.1,0.07;";
-    sTrendVars+="QA.ITS.EffTOTPt1,ITS.Anchor.EffTOTPt1,0.05,0.1,0.07;";
-    sTrendVars+="QA.ITS.EffTOTPt10,ITS.Anchor.EffTOTPt10,0.05,0.1,0.07;";
+    // Eff ITS: TPC->ITS //TODO add comment for each cut variable  (Sebastian)
+    sTrendVars+="QA.ITS.EffoneSPDPt02,ITS.Anchor.EffoneSPDPt02,0.05,0.1,0.07;"; // ITSefff warning+-5%, error+-10%; acceptable +-7%
+    sTrendVars+="QA.ITS.EffoneSPDPt1,ITS.Anchor.EffoneSPDPt1,0.05,0.1,0.07;";   //
+    sTrendVars+="QA.ITS.EffoneSPDPt10,ITS.Anchor.EffoneSPDPt10,0.05,0.1,0.07;"; //
+    sTrendVars+="QA.ITS.EffTOTPt02,ITS.Anchor.EffTOTPt02,0.05,0.1,0.07;";       //
+    sTrendVars+="QA.ITS.EffTOTPt1,ITS.Anchor.EffTOTPt1,0.05,0.1,0.07;";         //
+    sTrendVars+="QA.ITS.EffTOTPt10,ITS.Anchor.EffTOTPt10,0.05,0.1,0.07;";       //
     
     // Eff TRD: TPC->TRD
-    sTrendVars+="QA.TRD.TPCTRDmatchEffPosAll,TRD.Anchor.TPCTRDmatchEffPosAll,0.05,0.1,0.07;";
-    sTrendVars+="QA.TRD.TPCTRDmatchEffNegAll,TRD.Anchor.TPCTRDmatchEffNegAll,0.05,0.1,0.07;"; 
+    sTrendVars+="QA.TRD.TPCTRDmatchEffPosAll,TRD.Anchor.TPCTRDmatchEffPosAll,0.05,0.1,0.07;";  //
+    sTrendVars+="QA.TRD.TPCTRDmatchEffNegAll,TRD.Anchor.TPCTRDmatchEffNegAll,0.05,0.1,0.07;";  //
     
     // dEdx
     sTrendVars+="QA.TPC.meanMIP,TPC.Anchor.meanMIP,1,2,1;";     // meanMIP;  warning 1; error 2; physics acceptable 1; (nominal ~ 50)
@@ -208,6 +212,12 @@ void makeTPCMCAlarms(TTree * treeMC, Bool_t doCheck,Int_t verbose){
     TStatToolkit::SetStatusAlias(treeMC, sVar.Data(),    "statisticOK", Form("varname_Warning:(varname>varname_WarningMax||varname<varname_WarningMin)"));
     TStatToolkit::SetStatusAlias(treeMC, sVar.Data(),    "statisticOK", Form("varname_PhysAcc:(varname>varname_PhysAccMin&&varname<varname_PhysAccMax)"));
   }
+  // TODO Setup physics acceptable in case default+-0.1 is not acceptable (Sebastian)
+  //    All variable with units
+  //    ratios for which default 10 % cut is not apropriate
+  //    In some case e.g efficiency we should allow higher efficiency ... - could be assymetric
+  treeMC->SetAlias("diff0.MIPattachSlopeA_PhysAcc","abs(diff0.MIPattachSlopeA-diff0.MIPattachSlopeA_RobustMean)<0.5"); // phys. acceptable +-1
+  treeMC->SetAlias("diff0.MIPattachSlopeC_PhysAcc","abs(diff0.MIPattachSlopeC-diff0.MIPattachSlopeC_RobustMean)<0.5"); // phys. acceptable +-1
 
 
 
@@ -680,7 +690,7 @@ void MakeStatusPlots(){
     MakeStatusPlot("./", "dEdxStatusMCToAnchor.png", "mcAnchor.dEdx_Warning", "1");
 
     MakeStatusPlot("./", "nclStatusMCToAnchor.png", "mcAnchor.ncl_Warning", "1");
-//    MakeStatusPlot("./", "nclStatusAnchor.png", "ncl_Warning", "1","TPC.Anchor");    //missing corresponding alias
+    MakeStatusPlot("./", "nclStatusAnchor.png", "ncl_Warning", "1","TPC.Anchor");    //missing corresponding alias
 //    MakeStatusPlot("./", "nclStatusMC.png", "ncl_Warning", "1");                     //missing corresponding alias    
   }
   catch (const std::invalid_argument& ia) {
