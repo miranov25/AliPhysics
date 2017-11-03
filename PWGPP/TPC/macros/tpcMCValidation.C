@@ -129,10 +129,10 @@ void makeTPCMCAlarms(TTree * treeMC, Bool_t doCheck,Int_t verbose){
     sTrendVars+="QA.TPC.meanTPCncl,TPC.Anchor.meanTPCncl,10,20,5;";       // delta Ncl  warning 10 ,  error 20     (nominal ~ 100-140)
     sTrendVars+="QA.TPC.meanTPCnclF,TPC.Anchor.meanTPCnclF,0.05,0.10,0.05;"; // delta NclF  warning 5%,  error 10%    (nominal ~ 90%)
     // dcaR resolution
-    sTrendVars+="QA.TPC.dcarAP0,TPC.Anchor.dcarAP0,0.02,0.05,0.02;";     // dcarAP0;  warning 0.02 cm; error 0.05 cm  (nominal ~ 0.02 cm)
-    sTrendVars+="QA.TPC.dcarCP0,TPC.Anchor.dcarCP0,0.02,0.05,0.02;";     // dcarCP0;  warning 0.02 cm; error 0.05 cm  (nominal ~ 0.02 cm)
-    sTrendVars+="QA.TPC.dcarAP1,TPC.Anchor.dcarAP1,0.02,0.05,0.02;";     // dcarAP1;  warning 0.02 cm; error 0.05 cm  (nominal ~ 0.02 cm)
-    sTrendVars+="QA.TPC.dcarCP1,TPC.Anchor.dcarCP1,0.02,0.05,0.02;";     // dcarCP1;  warning 0.02 cm; error 0.05 cm  (nominal ~ 0.02 cm)
+    sTrendVars+="QA.TPC.dcarAP0,TPC.Anchor.dcarAP0,0.02,0.05,0.02;";     // dcar;  warning 0.02 cm; error 0.05 cm  (nominal ~ 0.02 cm)
+    sTrendVars+="QA.TPC.dcarCP0,TPC.Anchor.dcarCP0,0.02,0.05,0.02;";     // dcar;  warning 0.02 cm; error 0.05 cm  (nominal ~ 0.02 cm)
+    sTrendVars+="QA.TPC.dcarAP1,TPC.Anchor.dcarAP1,0.02,0.05,0.02;";     // dcar;  warning 0.02 cm; error 0.05 cm  (nominal ~ 0.02 cm)
+    sTrendVars+="QA.TPC.dcarCP1,TPC.Anchor.dcarCP1,0.02,0.05,0.02;";     // dcar;  warning 0.02 cm; error 0.05 cm  (nominal ~ 0.02 cm)
     
     sTrendVars+="QA.TPC.dcar_posA_0,TPC.Anchor.dcar_posA_0,0.2,1.0,0.2;";     // dcar;  warning 0.1 cm; error 0.15 cm  (nominal ~ 0.2 cm)
     sTrendVars+="QA.TPC.dcar_negA_0,TPC.Anchor.dcar_negA_0,0.2,1.0,0.2;";     // dcar;  warning 0.1 cm; error 0.15 cm  (nominal ~ 0.2 cm)
@@ -145,12 +145,12 @@ void makeTPCMCAlarms(TTree * treeMC, Bool_t doCheck,Int_t verbose){
     sTrendVars+="QA.TPC.dcaz_negC_0,TPC.Anchor.dcaz_negC_0,0.2,1.0,0.2;";     // dcaz;  warning 0.1 cm; error 0.15 cm  (nominal ~ 0.2 cm)
 
     // Eff ITS: TPC->ITS //TODO add comment for each cut variable  (Sebastian)
-    sTrendVars+="QA.ITS.EffoneSPDPt02,ITS.Anchor.EffoneSPDPt02,0.05,0.1,0.07;"; // ITSefff warning+-5%, error+-10%; acceptable +-7%
-    sTrendVars+="QA.ITS.EffoneSPDPt1,ITS.Anchor.EffoneSPDPt1,0.05,0.1,0.07;";   //
-    sTrendVars+="QA.ITS.EffoneSPDPt10,ITS.Anchor.EffoneSPDPt10,0.05,0.1,0.07;"; //
-    sTrendVars+="QA.ITS.EffTOTPt02,ITS.Anchor.EffTOTPt02,0.05,0.1,0.07;";       //
-    sTrendVars+="QA.ITS.EffTOTPt1,ITS.Anchor.EffTOTPt1,0.05,0.1,0.07;";         //
-    sTrendVars+="QA.ITS.EffTOTPt10,ITS.Anchor.EffTOTPt10,0.05,0.1,0.07;";       //
+    sTrendVars+="QA.ITS.EffoneSPDPt02,ITS.Anchor.EffoneSPDPt02,0.05,0.1,0.07;"; // ITSeff warning+-5%, error+-10%; acceptable +-7%
+    sTrendVars+="QA.ITS.EffoneSPDPt1,ITS.Anchor.EffoneSPDPt1,0.05,0.1,0.07;";   // ITSeff warning+-5%, error+-10%; acceptable +-7% 
+    sTrendVars+="QA.ITS.EffoneSPDPt10,ITS.Anchor.EffoneSPDPt10,0.05,0.1,0.07;"; // ITSeff warning+-5%, error+-10%; acceptable +-7% 
+    sTrendVars+="QA.ITS.EffTOTPt02,ITS.Anchor.EffTOTPt02,0.05,0.1,0.07;";       // ITSeff warning+-5%, error+-10%; acceptable +-7%
+    sTrendVars+="QA.ITS.EffTOTPt1,ITS.Anchor.EffTOTPt1,0.05,0.1,0.07;";         // ITSeff warning+-5%, error+-10%; acceptable +-7%
+    sTrendVars+="QA.ITS.EffTOTPt10,ITS.Anchor.EffTOTPt10,0.05,0.1,0.07;";       // ITSeff warning+-5%, error+-10%; acceptable +-7%
     
     // Eff TRD: TPC->TRD
     sTrendVars+="QA.TRD.TPCTRDmatchEffPosAll,TRD.Anchor.TPCTRDmatchEffPosAll,0.05,0.1,0.07;";  //
@@ -168,7 +168,7 @@ void makeTPCMCAlarms(TTree * treeMC, Bool_t doCheck,Int_t verbose){
   TStatToolkit::MakeAnchorAlias(treeMC,sTrendVars, doCheck, verbose);
 
   // 2.) Make aliases for Mean of MC-anchor of variables
-  //     alarms on |(MC-Anchor)-<MC-Anchor)>|
+  //     alarms on |(MC-Anchor)-<MC-Anchor)>| (diff0)    // and |(MC/Anchor)-<MC/Anchor)>| (ratio)
   treeMC->SetAlias("diff0.meanTPCncl" , "(QA.TPC.meanTPCncl-TPC.Anchor.meanTPCncl)");
   treeMC->SetAlias("diff0.meanTPCnclF" ,"(QA.TPC.meanTPCnclF-TPC.Anchor.meanTPCnclF)");
   treeMC->SetAlias("ratio.dcarAP0" ,    "(QA.TPC.dcarAP0/TPC.Anchor.dcarAP0)");
@@ -214,13 +214,30 @@ void makeTPCMCAlarms(TTree * treeMC, Bool_t doCheck,Int_t verbose){
   }
   // TODO Setup physics acceptable in case default+-0.1 is not acceptable (Sebastian)
   //    All variable with units
-  //    ratios for which default 10 % cut is not apropriate
-  //    In some case e.g efficiency we should allow higher efficiency ... - could be assymetric
-  treeMC->SetAlias("diff0.MIPattachSlopeA_PhysAcc","abs(diff0.MIPattachSlopeA-diff0.MIPattachSlopeA_RobustMean)<0.5"); // phys. acceptable +-1
-  treeMC->SetAlias("diff0.MIPattachSlopeC_PhysAcc","abs(diff0.MIPattachSlopeC-diff0.MIPattachSlopeC_RobustMean)<0.5"); // phys. acceptable +-1
-
-
-
+  //    ratios for which default 10 % cut is not appropriate
+  //    In some case e.g efficiency we should allow higher efficiency ... - could be asymmetric
+  treeMC->SetAlias("diff0.MIPattachSlopeA_PhysAcc","abs(diff0.MIPattachSlopeA-diff0.MIPattachSlopeA_RobustMean)<0.5");      // phys. acceptable +-0.5
+  treeMC->SetAlias("diff0.MIPattachSlopeC_PhysAcc","abs(diff0.MIPattachSlopeC-diff0.MIPattachSlopeC_RobustMean)<0.5");      // phys. acceptable +-0.5
+  treeMC->SetAlias("diff0.meanMIPele_PhysAcc","abs(diff0.meanMIPele-diff0.meanMIPele_RobustMean)<0.5");                     // phys. acceptable +-0.5
+  treeMC->SetAlias("diff0.resolutionMIPele_PhysAcc","abs(diff0.resolutionMIPele-diff0.resolutionMIPele_RobustMean)<0.5");   // phys. acceptable +-0.5
+  treeMC->SetAlias("diff0.dcar_posA_0_PhysAcc","abs(diff0.dcar_posA_0-diff0.dcar_posA_0_RobustMean)<0.5");                  // phys. acceptable +-0.5
+  treeMC->SetAlias("diff0.dcar_posC_0_PhysAcc","abs(diff0.dcar_posC_0-diff0.dcar_posC_0_RobustMean)<0.5");                  // phys. acceptable +-0.5
+  treeMC->SetAlias("diff0.dcar_negA_0_PhysAcc","abs(diff0.dcar_negA_0-diff0.dcar_negA_0_RobustMean)<0.5");                  // phys. acceptable +-0.5
+  treeMC->SetAlias("diff0.dcar_negC_0_PhysAcc","abs(diff0.dcar_negC_0-diff0.dcar_negC_0_RobustMean)<0.5");                  // phys. acceptable +-0.5
+  treeMC->SetAlias("diff0.dcaz_posA_0_PhysAcc","abs(diff0.dcaz_posA_0-diff0.dcaz_posA_0_RobustMean)<0.5");                  // phys. acceptable +-0.5
+  treeMC->SetAlias("diff0.dcaz_posC_0_PhysAcc","abs(diff0.dcaz_posC_0-diff0.dcaz_posC_0_RobustMean)<0.5");                  // phys. acceptable +-0.5
+  treeMC->SetAlias("diff0.dcaz_negA_0_PhysAcc","abs(diff0.dcaz_negA_0-diff0.dcaz_negA_0_RobustMean)<0.5");                  // phys. acceptable +-0.5
+  treeMC->SetAlias("diff0.dcaz_negC_0_PhysAcc","abs(diff0.dcaz_negC_0-diff0.dcaz_negC_0_RobustMean)<0.5");                  // phys. acceptable +-0.5  
+  treeMC->SetAlias("diff0.meanTPCncl_PhysAcc","abs(diff0.meanTPCncl-diff0.meanTPCncl_RobustMean)<0.5");                     // phys. acceptable +-0.5
+  treeMC->SetAlias("diff0.meanTPCnclF_PhysAcc","abs(diff0.meanTPCnclF-diff0.meanTPCnclF_RobustMean)<0.5");                  // phys. acceptable +-0.5  
+  treeMC->SetAlias("ratio.dcarAP0_PhysAcc","abs(ratio.dcarAP0-ratio.dcarAP0_RobustMean)<0.5");                              // phys. acceptable +-0.5
+  treeMC->SetAlias("ratio.dcarAP1_PhysAcc","abs(ratio.dcarAP1-ratio.dcarAP1_RobustMean)<0.5");                              // phys. acceptable +-0.5   
+  treeMC->SetAlias("ratio.dcarCP0_PhysAcc","abs(ratio.dcarCP0-ratio.dcarCP0_RobustMean)<0.5");                              // phys. acceptable +-0.5
+  treeMC->SetAlias("ratio.dcarCP1_PhysAcc","abs(ratio.dcarCP1-ratio.dcarCP1_RobustMean)<0.5");                              // phys. acceptable +-0.5   
+  treeMC->SetAlias("ratio.meanMIP_PhysAcc","abs(ratio.meanMIP-ratio.meanMIP_RobustMean)<0.5");                        // phys. acceptable +-0.5
+  treeMC->SetAlias("ratio.resolutionMIP_PhysAcc","abs(ratio.resolutionMIP-ratio.resolutionMIP_RobustMean)<0.5");            // phys. acceptable +-0.5
+  
+  
   // 3.) Configure combined status. Default using logical OR of problems
   TString sCombinedStatus=";";
   sCombinedStatus+="mcAnchor.ncl,absDiff.QA.TPC.meanTPCncl,absDiff.QA.TPC.meanTPCnclF,diff0.meanTPCncl,diff0.meanTPCnclF;"; // Status number of clusters and findable clusters
@@ -499,6 +516,9 @@ void MakeReport() {
   trendingDraw->MakePlot(outputDir, "meanMIP.png", "<Mean dEdx_{MIP}> (a.u) ", cRange, "",
                          "QA.TPC.meanMIP;TPC.Anchor.meanMIP:run:fitMIP.fElements[4];TPC.Anchor.fitMIP.fElements[4]", "defaultCut", "figTemplateTRDPair",
                          "figTemplateTRDPair", 1, 1.0, 6, kTRUE);
+  trendingDraw->AppendBand(outputDir,"meanMIP.png","meanMIP_obustMean/meanMIP_RobustMean;TPC.Anchor.meanMIPele_RobustMean/TPC.Anchor.meanMIP_RobustMean:run", "defaultCut", "figTemplateTRDPair",
+                         "figTemplateTRDPair", kTRUE, 1.0, kTRUE);
+    
   trendingDraw->MakePlot(outputDir, "meanElectron.png", "<dEdx_{el}> (a.u) ", cRange, "",
                          "QA.TPC.meanMIPele;TPC.Anchor.meanMIPele:run:fitElectron.fElements[4];TPC.Anchor.fitElectron.fElements[4]", "defaultCut", "figTemplateTRDPair",
                          "figTemplateTRDPair", 1, 1.0, 6, kTRUE);
@@ -690,7 +710,7 @@ void MakeStatusPlots(){
     MakeStatusPlot("./", "dEdxStatusMCToAnchor.png", "mcAnchor.dEdx_Warning", "1");
 
     MakeStatusPlot("./", "nclStatusMCToAnchor.png", "mcAnchor.ncl_Warning", "1");
-    MakeStatusPlot("./", "nclStatusAnchor.png", "ncl_Warning", "1","TPC.Anchor");    //missing corresponding alias
+//    MakeStatusPlot("./", "nclStatusAnchor.png", "ncl_Warning", "1","TPC.Anchor");    //missing corresponding alias
 //    MakeStatusPlot("./", "nclStatusMC.png", "ncl_Warning", "1");                     //missing corresponding alias    
   }
   catch (const std::invalid_argument& ia) {
@@ -773,6 +793,8 @@ void MakeJSROOTHTML(TString prefix, TString outputName){
 ///      - add plot for all variables contributing to alarms
 ///      - for TRD eff see the variables in treeMC->GetFriend("QA.TRD")->GetListOfBranches()->Print("","*ff*")
 ///      - plot is there can be added to the alarms
+///      
+///      - for plots with only one variable plot band 
 ///
 /// TOD0  - dcar, dcaz - including fits (currently only resolution)
 ///       - TPC-ITS matching
