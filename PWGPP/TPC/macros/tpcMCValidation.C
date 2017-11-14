@@ -21,7 +21,7 @@
   MakeStatusPlots();
   trendingDraw->fReport->Close();
   //
-
+  MakeHtml();
 
 \endcode
 */
@@ -67,6 +67,7 @@ Bool_t InitTPCMCValidation(TString mcPeriod, TString mcPass, TString anchorPerio
 void MakeReport();
 void MakeStatusPlots();
 void tpcMCValidation(const char *mcPeriod = "LHC15k1a1", const char *soutputDir = "./");
+void makeHtmlDCA();
 
 /// Print to the output string object names fulfilling criteria sRegExp
 /// \param array            - input TCollection
@@ -516,7 +517,7 @@ void MakeReport() {
   trendingDraw->MakePlot(outputDir, "meanMIP.png", "<Mean dEdx_{MIP}> (a.u) ", cRange, "",
                          "QA.TPC.meanMIP;TPC.Anchor.meanMIP:run:fitMIP.fElements[4];TPC.Anchor.fitMIP.fElements[4]", "defaultCut", "figTemplateTRDPair",
                          "figTemplateTRDPair", 1, 1.0, 6, kTRUE);
-  trendingDraw->AppendBand(outputDir,"meanMIP.png","meanMIP_obustMean/meanMIP_RobustMean;TPC.Anchor.meanMIPele_RobustMean/TPC.Anchor.meanMIP_RobustMean:run", "defaultCut", "figTemplateTRDPair",
+  trendingDraw->AppendBand(outputDir,"meanMIP.png","QA.TPC.meanMIP+absDiff.QA.TPC.meanMIP__WarningBand;QA.TPC.meanMIP-absDiff.QA.TPC.meanMIP__WarningBand:run", "defaultCut", "figTemplateTRDPair",
                          "figTemplateTRDPair", kTRUE, 1.0, kTRUE);
     
   trendingDraw->MakePlot(outputDir, "meanElectron.png", "<dEdx_{el}> (a.u) ", cRange, "",
@@ -602,9 +603,11 @@ void makeHtml() {
   TStatToolkit::AddMetadata(treeMC, "bz.tooltip", "Barrel field");
   TStatToolkit::AddMetadata(treeMC, "detectorMask.html","%b{detectorMask&0x7F}");
   TStatToolkit::AddMetadata(treeMC, "detectorMask.headerTooltip","Detector bit mask:\n . SPD\n . SDD\n . SSS\n . TPC\n . TRD");
+  makeHtmlDCA();
 }
 
 void makeHtmlDCA(){
+
   //TString metaDCA="<a title
   TString pathMC="<a href=\"http://aliqatpc.web.cern.ch/aliqatpc/sim/%d{year}/%s{period.GetName()}/passMC/000%d{run}/";
   TString pathData="<a href=\"http://aliqatpc.web.cern.ch/aliqatpc/data/%d{TPC.Anchor.year}/%s{TPC.Anchor.period.GetName()}/%{TPC.Anchor.pass.GetName()}/000%d{run}/";
@@ -767,6 +770,16 @@ void MakeJSROOTHTML(TString prefix, TString outputName){
   fclose (pFile);
 }
 
+/// Sebastian  -2 cases of usage
+/// \param refVariable       variable name  e.g.:   QA.TPC.meanMIP or TPC.Anchor.meanMIP
+/// \param bandNamePrefix    prefix name    e.g." absDiff.QA.TPC.meanMIP_
+/// \param selection         selection for makegraph
+/// \param style             like always (figTemplateTRD)
+void AddAppendBandDefault(TString refVariable, TString bandNamePrefix, TString selection /*other drawing variable  TString style*/ ){
+
+}
+
+
 
 /// DONE  - automatic decomposition status aliases
 /// DONE  - for the status graphs with friend - we need to use run list for other status
@@ -802,3 +815,6 @@ void MakeJSROOTHTML(TString prefix, TString outputName){
 /// TODO - add calibration trending plots and alarms (Marian)
 ///      - TStatToolkit::AddMetadata(treeMC,"status2.Legend","TPC ON")
 ///      - TStatToolkit::GetMetadata(treeMC,"status2.Legend")->GetTitle()
+
+
+/// TODO - AddAppendBandDefault - adding warning outlier and phys acceptable around reference data;
