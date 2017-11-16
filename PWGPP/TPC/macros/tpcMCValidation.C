@@ -15,7 +15,7 @@
   AliDrawStyle::ApplyStyle("figTemplate");
   //
   InitTPCMCValidation("LHC15k1a1","passMC","LHC15o", "pass3_lowIR_pidfix",0,0); //short period
-  InitTPCMCValidation("LHC16g1c","passMC","LHC15o", "pass1",0,0);   // long period example
+//  InitTPCMCValidation("LHC16g1c","passMC","LHC15o", "pass1",0,0);   // long period example
   //
   MakeReport();
   MakeStatusPlots();
@@ -55,7 +55,6 @@ TString queryString, queryTitle; ///
 TMultiGraph *graph = 0, *lines = 0;
 const char *outputDir="./";
 
-
 /// \param treeMC
 /// \param doCheck
 /// \param verbose
@@ -68,6 +67,7 @@ void MakeReport();
 void MakeStatusPlots();
 void tpcMCValidation(const char *mcPeriod = "LHC15k1a1", const char *soutputDir = "./");
 void makeHtmlDCA();
+void AddAppendBandDefault(const char *figureName,const char *refVariable, const char *bandNamePrefix, const char *selection);
 
 /// Print to the output string object names fulfilling criteria sRegExp
 /// \param array            - input TCollection
@@ -517,9 +517,12 @@ void MakeReport() {
   trendingDraw->MakePlot(outputDir, "meanMIP.png", "<Mean dEdx_{MIP}> (a.u) ", cRange, "",
                          "QA.TPC.meanMIP;TPC.Anchor.meanMIP:run:fitMIP.fElements[4];TPC.Anchor.fitMIP.fElements[4]", "defaultCut", "figTemplateTRDPair",
                          "figTemplateTRDPair", 1, 1.0, 6, kTRUE);
-  trendingDraw->AppendBand(outputDir,"meanMIP.png","QA.TPC.meanMIP+absDiff.QA.TPC.meanMIP__WarningBand;QA.TPC.meanMIP-absDiff.QA.TPC.meanMIP__WarningBand:run", "defaultCut", "figTemplateTRDPair",
-                         "figTemplateTRDPair", kTRUE, 1.0, kTRUE);
-    
+  trendingDraw->AppendBand(outputDir,"meanMIP.png","QA.TPC.meanMIP + absDiff.QA.TPC.meanMIP_WarningBand;(QA.TPC.meanMIP) - absDiff.QA.TPC.meanMIP_WarningBand:run", "defaultCut", "figTemplateTRDPair",
+                         "figTemplateTRDPair", kTRUE, 1.0, kTRUE);   
+  
+  AddAppendBandDefault("meanMIP.png","QA.TPC.meanMIP", "absDiff.QA.TPC.meanMIP", "defaultCut" /*other drawing variable  TString style*/ );
+//  AddAppendBandDefault(const char *figureName,const char * refVariable,const char * bandNamePrefix, const char * selection /*other drawing variable  TString style*/ ){
+  
   trendingDraw->MakePlot(outputDir, "meanElectron.png", "<dEdx_{el}> (a.u) ", cRange, "",
                          "QA.TPC.meanMIPele;TPC.Anchor.meanMIPele:run:fitElectron.fElements[4];TPC.Anchor.fitElectron.fElements[4]", "defaultCut", "figTemplateTRDPair",
                          "figTemplateTRDPair", 1, 1.0, 6, kTRUE);
@@ -589,6 +592,39 @@ void MakeReport() {
 }
 
 
+/// Sebastian  -2 cases of usage
+/// \param refVariable       variable name  e.g.:   QA.TPC.meanMIP or TPC.Anchor.meanMIP
+/// \param bandNamePrefix    prefix name    e.g." absDiff.QA.TPC.meanMIP_
+/// \param selection         selection for makegraph
+/// \param style             like always (figTemplateTRD)
+
+//  trendingDraw->AppendBand(outputDir,"meanMIP.png","QA.TPC.meanMIP+absDiff.QA.TPC.meanMIP__WarningBand;QA.TPC.meanMIP-absDiff.QA.TPC.meanMIP__WarningBand:run", "defaultCut", "figTemplateTRDPair",
+//                         "figTemplateTRDPair", kTRUE, 1.0, kTRUE);
+
+void AddAppendBandDefault(const char *figureName,const char * refVariable,const char * bandNamePrefix, const char * selection /*other drawing variable  TString style*/ ){
+  TMultiGraph *graph=0;
+  const char* aType[3]={"_WarningBand","_OutlierBand","_PhysAccBand"};
+  TString expr;
+  for(Int_t itype=0; itype<3; itype++){
+    expr = refVariable+TString("+")+bandNamePrefix+TString(aType[itype])+TString(";")+refVariable+TString("-")+bandNamePrefix+TString(aType[itype])+TString(":run"); 
+    graph = TStatToolkit::MakeMultGraph(treeMC,"",expr,selection, "figTemplateTRDPair", "figTemplateTRDPair",kTRUE,0,6,0,kTRUE);
+  
+  if(!graph){
+    ::Error("MakePlot","No plot returned -> dummy plot!");
+    }
+  else {
+    if (kTRUE) TStatToolkit::RebinSparseMultiGraph(graph,(TGraph*)trendingDraw->fStatusGraphM->GetListOfGraphs()->At(0));
+    TStatToolkit::DrawMultiGraph(graph,"l");
+    }
+  }
+  if(outputDir!=0){
+    trendingDraw->fWorkingCanvas->SaveAs(TString(outputDir)+"/"+TString(figureName));
+    trendingDraw->fWorkingCanvas->Print(TString(outputDir)+"/report.pdf");
+    if (trendingDraw->fReport) {trendingDraw->fReport->cd();trendingDraw->fWorkingCanvas->Write(figureName);}
+  }
+  static Int_t counter=0;
+  AliSysInfo::AddStamp(expr,2,counter++);
+}
 
 /// TODO - alias for the html table names, hints
 /// TODO - fix formatting in AliTreeFormulaF- in case of missing entry write undefined
@@ -770,14 +806,6 @@ void MakeJSROOTHTML(TString prefix, TString outputName){
   fclose (pFile);
 }
 
-/// Sebastian  -2 cases of usage
-/// \param refVariable       variable name  e.g.:   QA.TPC.meanMIP or TPC.Anchor.meanMIP
-/// \param bandNamePrefix    prefix name    e.g." absDiff.QA.TPC.meanMIP_
-/// \param selection         selection for makegraph
-/// \param style             like always (figTemplateTRD)
-void AddAppendBandDefault(TString refVariable, TString bandNamePrefix, TString selection /*other drawing variable  TString style*/ ){
-
-}
 
 
 
