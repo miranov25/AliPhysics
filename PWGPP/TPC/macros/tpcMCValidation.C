@@ -27,6 +27,7 @@
 */
 
 #include <TError.h>
+#include <TMultiGraph.h>
 #include "TCanvas.h"
 #include "TLatex.h"
 #include "TTree.h"
@@ -398,9 +399,13 @@ void MakeReport() {
   trendingDraw->MakePlot(outputDir, "meanTPCncl.png", "Number of clusters", cRange, "",
                          "QA.TPC.meanTPCncl;TPC.Anchor.meanTPCncl:run", "defaultCut", "figTemplateTRDPair",
                          "figTemplateTRDPair", 1, 1.0, 5, kTRUE);
+  AddAppendBandDefault("meanTPCncl.png","QA.TPC.meanTPCncl", "absDiff.QA.TPC.meanTPCncl", "defaultCut");
+  
   trendingDraw->MakePlot(outputDir, "meanTPCnclFindable.png", "Cluster fraction #left(#frac{N_{cl}}{N_{find.}}#right)",
                          cRange, "", "QA.TPC.meanTPCnclF;TPC.Anchor.meanTPCnclF:run", "defaultCut",
                          "figTemplateTRDPair", "figTemplateTRDPair", 1, 1.0, 5, kTRUE);
+  AddAppendBandDefault("meanTPCnclFindable.png","QA.TPC.meanTPCnclF", "absDiff.QA.TPC.meanTPCnclF", "defaultCut");
+    
   trendingDraw->MakePlot(outputDir, "meanTPCNclRatioMCtoAnchor.png", "Number of clusters MC/Anchor", cRange, "",
                          "meanTPCncl/TPC.Anchor.meanTPCncl;meanTPCnclF/TPC.Anchor.meanTPCnclF:run", "defaultCut",
                          "figTemplateTRDPair", "figTemplateTRDPair", 1, 1.0, 5, kTRUE);
@@ -517,15 +522,13 @@ void MakeReport() {
   trendingDraw->MakePlot(outputDir, "meanMIP.png", "<Mean dEdx_{MIP}> (a.u) ", cRange, "",
                          "QA.TPC.meanMIP;TPC.Anchor.meanMIP:run:fitMIP.fElements[4];TPC.Anchor.fitMIP.fElements[4]", "defaultCut", "figTemplateTRDPair",
                          "figTemplateTRDPair", 1, 1.0, 6, kTRUE);
-  trendingDraw->AppendBand(outputDir,"meanMIP.png","QA.TPC.meanMIP + absDiff.QA.TPC.meanMIP_WarningBand;(QA.TPC.meanMIP) - absDiff.QA.TPC.meanMIP_WarningBand:run", "defaultCut", "figTemplateTRDPair",
-                         "figTemplateTRDPair", kTRUE, 1.0, kTRUE);   
-  
-  AddAppendBandDefault("meanMIP.png","QA.TPC.meanMIP", "absDiff.QA.TPC.meanMIP", "defaultCut" /*other drawing variable  TString style*/ );
-//  AddAppendBandDefault(const char *figureName,const char * refVariable,const char * bandNamePrefix, const char * selection /*other drawing variable  TString style*/ ){
+  AddAppendBandDefault("meanMIP.png","QA.TPC.meanMIP", "absDiff.QA.TPC.meanMIP", "defaultCut");
   
   trendingDraw->MakePlot(outputDir, "meanElectron.png", "<dEdx_{el}> (a.u) ", cRange, "",
                          "QA.TPC.meanMIPele;TPC.Anchor.meanMIPele:run:fitElectron.fElements[4];TPC.Anchor.fitElectron.fElements[4]", "defaultCut", "figTemplateTRDPair",
                          "figTemplateTRDPair", 1, 1.0, 6, kTRUE);
+  AddAppendBandDefault("meanElectron.png","QA.TPC.meanMIPele", "absDiff.QA.TPC.meanMIPele", "defaultCut");
+    
   trendingDraw->MakePlot(outputDir, "electronMIPSeparation.png", "<dEdx_{el}>-<dEdx_{MIP}>", cRange, "",
                          "QA.TPC.electroMIPSeparation;TPC.Anchor.electroMIPSeparation:run", "defaultCut",
                          "figTemplateTRDPair", "figTemplateTRDPair", 1, 1.0, 6, kTRUE);
@@ -602,21 +605,29 @@ void MakeReport() {
 //                         "figTemplateTRDPair", kTRUE, 1.0, kTRUE);
 
 void AddAppendBandDefault(const char *figureName,const char * refVariable,const char * bandNamePrefix, const char * selection /*other drawing variable  TString style*/ ){
-  TMultiGraph *graph=0;
-  const char* aType[3]={"_WarningBand","_OutlierBand","_PhysAccBand"};
+  TMultiGraph *mgraph=0;
+  const char* aType[3]={"_WarningBand","_OutlierBand","_PhysAccBand"}; //yellow 400 ,red 632 ,green 416/    
   TString expr;
+  AliDrawStyle::SetCssStyle("testStyle",AliDrawStyle::ReadCSSFile("$AliRoot_SRC/STAT/test/alirootTestStyle.css",0));
   for(Int_t itype=0; itype<3; itype++){
     expr = refVariable+TString("+")+bandNamePrefix+TString(aType[itype])+TString(";")+refVariable+TString("-")+bandNamePrefix+TString(aType[itype])+TString(":run"); 
-    graph = TStatToolkit::MakeMultGraph(treeMC,"",expr,selection, "figTemplateTRDPair", "figTemplateTRDPair",kTRUE,0,6,0,kTRUE);
+    mgraph = TStatToolkit::MakeMultGraph(treeMC,"",expr,selection, "figTemplateTRDPair", "figTemplateTRDPair",kTRUE,0,6,0,kTRUE);
   
-  if(!graph){
+  if(!mgraph){
     ::Error("MakePlot","No plot returned -> dummy plot!");
     }
   else {
-    if (kTRUE) TStatToolkit::RebinSparseMultiGraph(graph,(TGraph*)trendingDraw->fStatusGraphM->GetListOfGraphs()->At(0));
-    TStatToolkit::DrawMultiGraph(graph,"l");
+    if (kTRUE) TStatToolkit::RebinSparseMultiGraph(mgraph,(TGraph*)trendingDraw->fStatusGraphM->GetListOfGraphs()->At(0));
+    
+    for(Int_t it=0; it<mgraph->GetListOfGraphs()->GetSize(); it++){
+      TGraph* band = (TGraph*) mgraph->GetListOfGraphs()->At(it);
+      band->SetName(TString::Format("graph[%d].class(deadBand)",itype).Data());
+      AliDrawStyle::TGraphApplyStyle("testStyle",band);
     }
-  }
+    
+    TStatToolkit::DrawMultiGraph(mgraph,"l");
+    }
+  }            
   if(outputDir!=0){
     trendingDraw->fWorkingCanvas->SaveAs(TString(outputDir)+"/"+TString(figureName));
     trendingDraw->fWorkingCanvas->Print(TString(outputDir)+"/report.pdf");
