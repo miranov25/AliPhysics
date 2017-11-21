@@ -609,7 +609,7 @@ void MakeReport() {
 void AddAppendBandDefault(const char *figureName,const char * refVariable,const char * bandNamePrefix, const char * selection, const char* groupName /*other drawing variable  TString style*/ ){
   TMultiGraph *mGraph=0;
   
-  AliDrawStyle::SetCssStyle("testStyle",AliDrawStyle::ReadCSSFile("$AliRoot_SRC/STAT/test/alirootTestStyle.css",0));//remove
+//  AliDrawStyle::SetCssStyle("testStyle",AliDrawStyle::ReadCSSFile("$AliRoot_SRC/STAT/test/alirootTestStyle.css",0));//remove
   
   const char* aType[3]={"_WarningBand","_OutlierBand","_PhysAccBand"}; //yellow 400 ,red 632 ,green 416/    
   TString expr;
