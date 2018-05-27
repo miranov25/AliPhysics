@@ -162,7 +162,9 @@ void AddMetadata(){
   for (Int_t i=0; i<36; i++) rocGainOROCMedium[i]=treeCalib->GetHistogram()->GetBinContent(i+1);
   treeCalib->Draw("rocGainOROCLong.fElements:Iteration$>>rocGainOROCMedium(36,0,36)","isSelected&&rocGainIROC.fElements>0","profgoff");
   for (Int_t i=0; i<36; i++) rocGainOROCLong[i]=treeCalib->GetHistogram()->GetBinContent(i+1);
-
+  //
+  treeCalib->SetAlias("separationPower","2*(meanMIPele-meanMIP)/(resolutionMIP*meanMIP+resolutionMIPele*meanMIPele)");
+  treeCalib->SetAlias("qaPIDOK","resolutionMIP>0&&resolutionMIPele>0");
 }
 
 /// register default fitters
@@ -209,7 +211,7 @@ void MakeGainFitsMinuit(){
 
   // Draw results
   TCanvas * canvasGainFit = new TCanvas("canvasGaiFit","canvasGaiFit", 1600,1000);
-  AliPainter::DivideTPad("[1,1,1,2]","","",canvasGainFit);
+  AliPainter::DivideTPad(canvasGainFit,"[1,1,1,2]",0);
   canvasGainFit->cd(1);
   TLegend* legend = new TLegend(0.11,0.65,0.5,0.89, "TPC gain");
   legend->SetMargin(0.03); legend->SetBorderSize(0);
