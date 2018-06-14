@@ -1,17 +1,21 @@
 #ifndef ALIESDTOOLS_H
 #define ALESDTOOLS_H
 
+class AliTrackerBase;
 
 class AliESDtools : public TNamed
 {
   public:
   AliESDtools();
+  AliESDtools(const AliESDtools &tools);
+  AliESDtools& operator=(const AliESDtools &rhs);
   void Init(TTree* tree);
   /// caching
   Int_t  CacheTPCEventInformation();
   Int_t CalculateEventVariables();
   void TPCVertexFit(TH1F *hisVertex);
-  Int_t  GetNearestTrack(const AliExternalTrackParam * trackMatch, Int_t indexSkip, AliESDEvent*event, Int_t trackType, Int_t paramType, AliExternalTrackParam & paramNearest);
+  Int_t  GetNearestTrack(Int_t indexTrk, Int_t paramType, /*AliExternalTrackParam & paramNearest,*/ TTreeSRedirector *streamer = 0x0, AliTrackerBase *tracker = 0x0);
+  //Int_t  GetNearestTrack(Int_t indexTrk, Int_t paramType, /*AliExternalTrackParam & paramNearest,*/ TTreeSRedirector *streamer);
   void   ProcessITSTPCmatchOut(AliESDEvent *const esdEvent, AliESDfriend *const esdFriend, TTreeStream *pcstream);
   // static functions for querying in TTree formula
   static Int_t    SCalculateEventVariables(Int_t entry){fgInstance->fESDtree->GetEntry(entry); return fgInstance->CalculateEventVariables();}

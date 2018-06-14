@@ -57,6 +57,7 @@
 #include "AliNDLocalRegression.h"
 #include "AliESDEvent.h"
 #include "AliESDtools.h"
+#include "AliTrackerBase.h"
 
 ClassImp(AliESDtools)
 AliESDtools*  AliESDtools::fgInstance;
@@ -77,15 +78,73 @@ AliESDtools::AliESDtools():
   fHistPhiITScounterA(nullptr),         // helper histogram for TIdentity tree
   fHistPhiITScounterC(nullptr),         // helper histogram for TIdentity tree
   fCacheTrackCounters(nullptr),         // track counter
-  fCacheTrackTPCCountersZ(nullptr),         // track counter
+  fCacheTrackTPCCountersZ(nullptr),     // track counter
   fCacheTrackdEdxRatio(nullptr),        // dedx info counter
   fCacheTrackNcl(nullptr),              // ncl counter
   fCacheTrackChi2(nullptr),             // chi2 counter
   fCacheTrackMatchEff(nullptr),         // matchEff counter
-  fLumiGraph(nullptr)                  // graph for the interaction rate info for a run
+  fLumiGraph(nullptr)                   // graph for the interaction rate info for a run
 {
   fgInstance=this;
 }
+
+AliESDtools::AliESDtools(const AliESDtools &tools) :
+  TNamed(tools),
+  fVerbose(tools.fVerbose),
+  fESDtree(tools.fESDtree),
+  fEvent(tools.fEvent),
+  fHisTPCVertexA(tools.fHisTPCVertexA),
+  fHisTPCVertexC(tools.fHisTPCVertexC),
+  fHisTPCVertexACut(tools.fHisTPCVertexACut),
+  fHisTPCVertexCCut(tools.fHisTPCVertexCCut),
+  fHisTPCVertex(tools.fHisTPCVertex),
+  fHistPhiTPCcounterA(tools.fHistPhiTPCcounterA),         // helper histogram phi counteres
+  fHistPhiTPCcounterC(tools.fHistPhiTPCcounterC),         // helper histogram for TIdentity tree
+  fHistPhiTPCcounterAITS(tools.fHistPhiTPCcounterAITS),   // helper histogram for TIdentity tree
+  fHistPhiTPCcounterCITS(tools.fHistPhiTPCcounterCITS),   // helper histogram for TIdentity tree
+  fHistPhiITScounterA(tools.fHistPhiITScounterA),         // helper histogram for TIdentity tree
+  fHistPhiITScounterC(tools.fHistPhiITScounterA),         // helper histogram for TIdentity tree
+  fCacheTrackCounters(tools.fCacheTrackCounters),         // track counter
+  fCacheTrackTPCCountersZ(tools.fCacheTrackTPCCountersZ), // track counter
+  fCacheTrackdEdxRatio(tools.fCacheTrackdEdxRatio),       // dedx info counter
+  fCacheTrackNcl(tools.fCacheTrackNcl),                   // ncl counter
+  fCacheTrackChi2(tools.fCacheTrackChi2),                 // chi2 counter
+  fCacheTrackMatchEff(tools.fCacheTrackMatchEff),         // matchEff counter
+  fLumiGraph(tools.fLumiGraph)                            // graph for the interaction rate info for a run
+{
+  // copy constructor
+}
+
+AliESDtools& AliESDtools::operator=(const AliESDtools &rhs)
+{
+  // assignment operator
+  if (this != &rhs) {
+    TNamed::operator=(rhs);
+    fVerbose                = rhs.fVerbose; 
+    fESDtree                = rhs.fESDtree; 
+    fEvent                  = rhs.fEvent; 
+    fHisTPCVertexA          = rhs.fHisTPCVertexA; 
+    fHisTPCVertexC          = rhs.fHisTPCVertexC; 
+    fHisTPCVertexACut       = rhs.fHisTPCVertexACut; 
+    fHisTPCVertexCCut       = rhs.fHisTPCVertexCCut; 
+    fHisTPCVertex           = rhs.fHisTPCVertex; 
+    fHistPhiTPCcounterA     = rhs.fHistPhiTPCcounterA; 
+    fHistPhiTPCcounterC     = rhs.fHistPhiTPCcounterC; 
+    fHistPhiTPCcounterAITS  = rhs.fHistPhiTPCcounterAITS; 
+    fHistPhiTPCcounterCITS  = rhs.fHistPhiTPCcounterCITS; 
+    fHistPhiITScounterA     = rhs.fHistPhiITScounterA; 
+    fHistPhiITScounterC     = rhs.fHistPhiITScounterC; 
+    fCacheTrackCounters     = rhs.fCacheTrackCounters; 
+    fCacheTrackTPCCountersZ = rhs.fCacheTrackTPCCountersZ; 
+    fCacheTrackdEdxRatio    = rhs.fCacheTrackdEdxRatio; 
+    fCacheTrackNcl          = rhs.fCacheTrackNcl; 
+    fCacheTrackChi2         = rhs.fCacheTrackChi2; 
+    fCacheTrackMatchEff     = rhs.fCacheTrackMatchEff; 
+    fLumiGraph              = rhs.fLumiGraph; 
+  }
+  return *this;
+}
+
 
 void AliESDtools::Init(TTree *tree) {
   AliESDtools & tools = *this;
@@ -387,69 +446,93 @@ Int_t AliESDtools::CalculateEventVariables() {
 }
 
 
-///
-/// \param trackMatch    -  input track parameter
-/// \param indexSkip     - index to skip  index of track itself
-/// \param event         - posinter to the ESD event
-/// \param trackType     0 - find closets ITS standalone
-///                      1 - find closest track with TPC
-///                      2 - closest track with ITS and TPC
-/// \param paramType
-/// \param paramNearest    - parameter for closest track according trackType
-/// \return               - index of the closets track (chi2 distance)
-Int_t   AliESDtools::GetNearestTrack(const AliExternalTrackParam * trackMatch, Int_t indexSkip, AliESDEvent*event, Int_t trackType, Int_t paramType, AliExternalTrackParam & paramNearest){
+Int_t   AliESDtools::GetNearestTrack(Int_t indexTrk, Int_t paramType, TTreeSRedirector *streamer, AliTrackerBase *tracker){
   //
-  // Find track with closest chi2 distance  (assume all track ae propagated to the DCA)
-
-  //   paramType = 0 - global track
-  //               1 - track at inner wall of TPC
-  if (trackMatch==NULL){
-    ::Error("AliAnalysisTaskFilteredTree::GetNearestTrack","invalid track pointer");
-    return -1;
-  }
-  Int_t ntracks=event->GetNumberOfTracks();
-  const Double_t ktglCut=0.1;
-  const Double_t kqptCut=0.4;
-  const Double_t kAlphaCut=0.2;
+  const AliESDtrack *trackMatch = fEvent->GetTrack(indexTrk);
   //
-  Double_t chi2Min=100000;
-  Int_t indexMin=-1;
-  for (Int_t itrack=0; itrack<ntracks; itrack++){
-    if (itrack==indexSkip) continue;
-    AliESDtrack *ptrack=event->GetTrack(itrack);
-    if (ptrack==NULL) continue;
-    if (trackType==0 && (ptrack->IsOn(0x1)==kFALSE || ptrack->IsOn(0x10)==kTRUE))  continue;     // looks for track without TPC information
-    if (trackType==1 && (ptrack->IsOn(0x10)==kFALSE))   continue;                                // looks for tracks with   TPC information
-    if (trackType==2 && (ptrack->IsOn(0x1)==kFALSE || ptrack->IsOn(0x10)==kFALSE)) continue;      // looks for tracks with   TPC+ITS information
+  Int_t nTracks = fEvent->GetNumberOfTracks();
+  const Double_t ktglCut = .05;
+  const Double_t kqptCut = .99;
+  const Double_t kAlphaCut = .5;
+  //
+  Double_t chi2Min = 10000;
+  Int_t indexMin = -1;
 
-    if (ptrack->GetKinkIndex(0)<0) continue;              // skip kink daughters
-    const AliExternalTrackParam * track=0;                //
-    if (paramType==0) track=ptrack;                       // Global track
-    if (paramType==1) track=ptrack->GetInnerParam();      // TPC only track at inner wall of TPC
-    if (track==NULL) {
+  ULong_t trackStatusNearest = 0;
+  ULong_t trackStatusProbe = trackMatch->GetStatus();
+
+  AliExternalTrackParam dbgTrk(*trackMatch);
+  AliExternalTrackParam dbgTrkNearest;
+
+  for (Int_t iTrack = 0; iTrack < nTracks; iTrack++) {
+    //if (iTrack == indexTrk)
+    //  continue;
+    AliESDtrack *ptrack = fEvent->GetTrack(iTrack);
+    if (ptrack==NULL)
+      continue;
+    // status flags: 0x1 - ITSin, 0x10 - TPCin, 0x100 - TRDin, etc
+    //if (trackType==0 && (ptrack->IsOn(0x1)==kFALSE || ptrack->IsOn(0x10)==kTRUE))  continue;     // looks for track without TPC information
+    //if (trackType==1 && (ptrack->IsOn(0x10)==kFALSE))   continue;                                // looks for tracks with   TPC information
+    //if (trackType==2 && (ptrack->IsOn(0x1)==kFALSE || ptrack->IsOn(0x10)==kFALSE)) continue;      // looks for tracks with   TPC+ITS information
+
+    if (ptrack->GetKinkIndex(0) < 0) continue;            // skip kink daughters
+    const AliExternalTrackParam * track = nullptr;        //
+    if (paramType == 0) track = ptrack;                   // Global track
+    if (paramType == 1) track = ptrack->GetInnerParam();  // TPC only track at inner wall of TPC
+    if (track == NULL) {
       continue;
     }
+
     // first rough cuts
     // fP3 cut
-    if (TMath::Abs((track->GetTgl()-trackMatch->GetTgl()))>ktglCut) continue;
+    if ( TMath::Abs( track->GetTgl() - trackMatch->GetTgl() ) > ktglCut )
+      continue;
     // fP4 cut
-    if (TMath::Abs((track->GetSigned1Pt()-trackMatch->GetSigned1Pt()))>kqptCut) continue;
+    if ( TMath::Abs( track->GetSigned1Pt() - trackMatch->GetSigned1Pt() ) > kqptCut)
+      continue;
     // fAlpha cut
-    //Double_t alphaDist=TMath::Abs((track->GetAlpha()-trackMatch->GetAlpha()));
-    Double_t alphaDist=TMath::Abs(TMath::ATan2(track->Py(),track->Px())-TMath::ATan2(trackMatch->Py(),trackMatch->Py()));
-    if (alphaDist>TMath::Pi()) alphaDist-=TMath::TwoPi();
-    if (alphaDist>kAlphaCut) continue;
+    if ( TMath::Abs( track->GetAlpha() - trackMatch->GetAlpha() ) > kAlphaCut )
+      continue;
     // calculate and extract track with smallest chi2 distance
     AliExternalTrackParam param(*track);
-    if (param.Rotate(trackMatch->GetAlpha())==kFALSE) continue;
-    if (param.PropagateTo(trackMatch->GetX(),trackMatch->GetBz())==kFALSE) continue;
-    Double_t chi2=trackMatch->GetPredictedChi2(&param);
-    if (chi2<chi2Min){
-      indexMin=itrack;
-      chi2Min=chi2;
-      paramNearest=param;
+    if ( param.Rotate( trackMatch->GetAlpha() ) == kFALSE )
+      continue;
+    if (tracker) {
+      if ( !tracker->PropagateTrackToBxByBz(&param, trackMatch->GetX(), trackMatch->GetMass(), 2.0, kFALSE, 0.8) ) {
+        continue;
+      }
+    }
+    else {
+      if ( !param.PropagateTo(trackMatch->GetX(), trackMatch->GetBz()) )
+        continue;
+    }
+    Double_t chi2 = trackMatch->GetPredictedChi2(&param);
+    // output debug information
+    //
+    if (chi2 < chi2Min){
+      indexMin = iTrack;
+      chi2Min = chi2;
+      dbgTrkNearest = param;
+      trackStatusNearest = ptrack->GetStatus();
     }
   }
+
+  if (streamer) {
+    Double_t probeAlpha = trackMatch->GetAlpha();
+    Double_t probeX     = trackMatch->GetX();
+    (*streamer) << "debugTree" <<
+      "probeAlpha=" << probeAlpha <<
+      "probeX=" << probeX <<
+      "indexTrack=" << indexTrk <<
+      "indexNearest=" << indexMin <<
+      "trackStatusProbe=" << trackStatusProbe <<
+      "trackStatusNearest=" << trackStatusNearest <<
+      "chi2=" << chi2Min <<
+      "paramProbe.=" << &dbgTrk <<
+      "paramNearest.=" << &dbgTrkNearest <<
+      "\n";
+  }
+
   return indexMin;
 
 }
