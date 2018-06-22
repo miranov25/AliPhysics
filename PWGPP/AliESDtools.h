@@ -1,5 +1,5 @@
 #ifndef ALIESDTOOLS_H
-#define ALESDTOOLS_H
+#define ALIESDTOOLS_H
 
 class AliTrackerBase;
 
@@ -10,11 +10,13 @@ class AliESDtools : public TNamed
   AliESDtools(const AliESDtools &tools);
   AliESDtools& operator=(const AliESDtools &rhs);
   void Init(TTree* tree);
+  void DeInit();
   /// caching
   Int_t  CacheTPCEventInformation();
   Int_t CalculateEventVariables();
+  void StreamEventVariables();
   void TPCVertexFit(TH1F *hisVertex);
-  Int_t  GetNearestTrack(Int_t indexTrk, Int_t paramType, /*AliExternalTrackParam & paramNearest,*/ TTreeSRedirector *streamer = 0x0, AliTrackerBase *tracker = 0x0);
+  Int_t  GetNearestTrack(Int_t indexTrk, Int_t paramType, AliTrackerBase *tracker = 0x0);
   //Int_t  GetNearestTrack(Int_t indexTrk, Int_t paramType, /*AliExternalTrackParam & paramNearest,*/ TTreeSRedirector *streamer);
   void   ProcessITSTPCmatchOut(AliESDEvent *const esdEvent, AliESDfriend *const esdFriend, TTreeStream *pcstream);
   // static functions for querying in TTree formula
@@ -49,6 +51,9 @@ class AliESDtools : public TNamed
   TVectorF         * fCacheTrackChi2;             // chi2 counter
   TVectorF         * fCacheTrackMatchEff;         // matchEff counter
   TGraph           * fLumiGraph;                  // graph for the interaction rate info for a run
+  ULong64_t fGlobalID;                            // global event ID
+  //
+  TTreeSRedirector * fStreamer;                   // streamer
   //
   static AliESDtools* fgInstance;                /// instance of the tool
   ClassDef(AliESDtools, 1) 

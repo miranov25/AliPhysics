@@ -83,7 +83,9 @@ AliESDtools::AliESDtools():
   fCacheTrackNcl(nullptr),              // ncl counter
   fCacheTrackChi2(nullptr),             // chi2 counter
   fCacheTrackMatchEff(nullptr),         // matchEff counter
-  fLumiGraph(nullptr)                   // graph for the interaction rate info for a run
+  fLumiGraph(nullptr),                  // graph for the interaction rate info for a run
+  fGlobalID(0),
+  fStreamer(nullptr)
 {
   fgInstance=this;
 }
@@ -110,7 +112,9 @@ AliESDtools::AliESDtools(const AliESDtools &tools) :
   fCacheTrackNcl(tools.fCacheTrackNcl),                   // ncl counter
   fCacheTrackChi2(tools.fCacheTrackChi2),                 // chi2 counter
   fCacheTrackMatchEff(tools.fCacheTrackMatchEff),         // matchEff counter
-  fLumiGraph(tools.fLumiGraph)                            // graph for the interaction rate info for a run
+  fLumiGraph(tools.fLumiGraph),                           // graph for the interaction rate info for a run
+  fGlobalID(tools.fGlobalID),
+  fStreamer(tools.fStreamer)
 {
   // copy constructor
 }
@@ -141,6 +145,8 @@ AliESDtools& AliESDtools::operator=(const AliESDtools &rhs)
     fCacheTrackChi2         = rhs.fCacheTrackChi2; 
     fCacheTrackMatchEff     = rhs.fCacheTrackMatchEff; 
     fLumiGraph              = rhs.fLumiGraph; 
+    fGlobalID               = rhs.fGlobalID;
+    fStreamer               = rhs.fStreamer;
   }
   return *this;
 }
@@ -176,6 +182,13 @@ void AliESDtools::Init(TTree *tree) {
     fHistPhiTPCcounterCITS = new TH1F("hPhiTPCcounterCITS", "control histogram to count tracks on the C side in phi ", 36, 0., 18.);
     fHistPhiITScounterA = new TH1F("hPhiITScounterA", "control histogram to count tracks on the A side in phi ", 36, 0., 18.);
     fHistPhiITScounterC = new TH1F("hPhiITScounterC", "control histogram to count tracks on the C side in phi ", 36, 0., 18.);
+  }
+  fStreamer = new TTreeSRedirector("esdToolsDebug.root", "recreate");
+}
+
+void AliESDtools::DeInit() {
+  if (fStreamer) {
+    delete fStreamer;
   }
 }
 
@@ -244,8 +257,6 @@ void AliESDtools::TPCVertexFit(TH1F *hisVertex){
   }
 }
 
-
-
 //
 //
 Int_t AliESDtools::CalculateEventVariables() {
@@ -268,10 +279,17 @@ Int_t AliESDtools::CalculateEventVariables() {
   //
   //
   const Int_t kNclTPCcut=60;
-  const Int_t kTglCut=1.5;
+  const Float_t kTglCut=1.5;
   const Int_t kDCACut=5;  // 5 cm primary cut
   const Int_t kMindEdxClustersRegion=15;
-  const Int_t kPtCut=0.100;
+  const Float_t kPtCut=0.100;
+  //
+  //
+  ULong64_t orbitID = (ULong64_t) fEvent->GetOrbitNumber();
+  ULong64_t bunchCrossID = (ULong64_t) fEvent->GetBunchCrossNumber();
+  ULong64_t periodID = (ULong64_t) fEvent->GetPeriodNumber();
+  fGlobalID = ( (periodID << 36ULL) || (orbitID << 12ULL) | (bunchCrossID) );
+  //printf("orbit=%llu, bunchCross=%llu, period=%llu, gid=%llu\n", orbitID, bunchCrossID, periodID, fGlobalID);
   //
   //
   AliTPCdEdxInfo tpcdEdxInfo;
@@ -445,10 +463,28 @@ Int_t AliESDtools::CalculateEventVariables() {
   return 1;
 }
 
+//
+void AliESDtools::StreamEventVariables() {
+  (*fStreamer) << "evVars" <<
+    "gid=" << fGlobalID <<
+    "trackCounters.=" << fCacheTrackCounters <<
+    "trackTPCCountersZ.=" << fCacheTrackTPCCountersZ <<
+    "trackdEdxRatio.=" << fCacheTrackdEdxRatio <<
+    "trackNcl.=" << fCacheTrackNcl <<
+    "trackChi2.=" << fCacheTrackChi2 <<
+    "trackMatchEff.=" << fCacheTrackMatchEff <<
+    "\n";
+}
 
-Int_t   AliESDtools::GetNearestTrack(Int_t indexTrk, Int_t paramType, TTreeSRedirector *streamer, AliTrackerBase *tracker){
+//
+Int_t   AliESDtools::GetNearestTrack(Int_t indexTrk, Int_t paramType, AliTrackerBase *tracker){
   //
   const AliESDtrack *trackMatch = fEvent->GetTrack(indexTrk);
+  //
+  if ( !trackMatch->IsOn(0x10) || trackMatch->IsOn(0x1) ) {
+    // check only TPC only tracks
+    return -1;
+  }
   //
   Int_t nTracks = fEvent->GetNumberOfTracks();
   const Double_t ktglCut = .05;
@@ -461,20 +497,18 @@ Int_t   AliESDtools::GetNearestTrack(Int_t indexTrk, Int_t paramType, TTreeSRedi
   ULong_t trackStatusNearest = 0;
   ULong_t trackStatusProbe = trackMatch->GetStatus();
 
-  AliExternalTrackParam dbgTrk(*trackMatch);
-  AliExternalTrackParam dbgTrkNearest;
+  AliESDtrack dbgTrk(*trackMatch);
 
   for (Int_t iTrack = 0; iTrack < nTracks; iTrack++) {
-    //if (iTrack == indexTrk)
-    //  continue;
-    AliESDtrack *ptrack = fEvent->GetTrack(iTrack);
+    if (iTrack == indexTrk)
+      continue;
+    const AliESDtrack *ptrack = fEvent->GetTrack(iTrack);
     if (ptrack==NULL)
       continue;
     // status flags: 0x1 - ITSin, 0x10 - TPCin, 0x100 - TRDin, etc
-    //if (trackType==0 && (ptrack->IsOn(0x1)==kFALSE || ptrack->IsOn(0x10)==kTRUE))  continue;     // looks for track without TPC information
-    //if (trackType==1 && (ptrack->IsOn(0x10)==kFALSE))   continue;                                // looks for tracks with   TPC information
-    //if (trackType==2 && (ptrack->IsOn(0x1)==kFALSE || ptrack->IsOn(0x10)==kFALSE)) continue;      // looks for tracks with   TPC+ITS information
-
+    if (ptrack->IsOn(0x10)) {
+      continue;
+    }
     if (ptrack->GetKinkIndex(0) < 0) continue;            // skip kink daughters
     const AliExternalTrackParam * track = nullptr;        //
     if (paramType == 0) track = ptrack;                   // Global track
@@ -512,15 +546,16 @@ Int_t   AliESDtools::GetNearestTrack(Int_t indexTrk, Int_t paramType, TTreeSRedi
     if (chi2 < chi2Min){
       indexMin = iTrack;
       chi2Min = chi2;
-      dbgTrkNearest = param;
       trackStatusNearest = ptrack->GetStatus();
     }
   }
 
-  if (streamer) {
+  if (fStreamer && indexMin > 0) {
     Double_t probeAlpha = trackMatch->GetAlpha();
     Double_t probeX     = trackMatch->GetX();
-    (*streamer) << "debugTree" <<
+    AliESDtrack dbgTrkNearest(*(fEvent->GetTrack(indexMin)));
+    (*fStreamer) << "nearestTrk" <<
+      "gid=" << fGlobalID <<
       "probeAlpha=" << probeAlpha <<
       "probeX=" << probeX <<
       "indexTrack=" << indexTrk <<
