@@ -499,40 +499,57 @@ Int_t   AliESDtools::GetNearestTrack(Int_t indexTrk, Int_t paramType, AliTracker
 
   AliESDtrack dbgTrk(*trackMatch);
 
+  int status = 0;
+
   for (Int_t iTrack = 0; iTrack < nTracks; iTrack++) {
-    if (iTrack == indexTrk)
+    if (iTrack == indexTrk) {
+      status = 2;
       continue;
+    }
     const AliESDtrack *ptrack = fEvent->GetTrack(iTrack);
-    if (ptrack==NULL)
+    if (ptrack==NULL) {
+      status = -2;
       continue;
+    }
     // status flags: 0x1 - ITSin, 0x10 - TPCin, 0x100 - TRDin, etc
     if (ptrack->IsOn(0x10)) {
+      status = 4;
       continue;
     }
     if (ptrack->GetKinkIndex(0) < 0) continue;            // skip kink daughters
     const AliExternalTrackParam * track = nullptr;        //
     if (paramType == 0) track = ptrack;                   // Global track
-    if (paramType == 1) track = ptrack->GetInnerParam();  // TPC only track at inner wall of TPC
+    if (paramType == 1) track = ptrack->GetConstrainedParam();  // TPC only track at inner wall of TPC
     if (track == NULL) {
+      status = -4;
       continue;
     }
 
     // first rough cuts
     // fP3 cut
-    if ( TMath::Abs( track->GetTgl() - trackMatch->GetTgl() ) > ktglCut )
+    if ( TMath::Abs( track->GetTgl() - trackMatch->GetTgl() ) > ktglCut ) {
+      status = 6;
       continue;
+    }
     // fP4 cut
-    if ( TMath::Abs( track->GetSigned1Pt() - trackMatch->GetSigned1Pt() ) > kqptCut)
+    if ( TMath::Abs( track->GetSigned1Pt() - trackMatch->GetSigned1Pt() ) > kqptCut) {
+      status = 8;
       continue;
+    }
     // fAlpha cut
-    if ( TMath::Abs( track->GetAlpha() - trackMatch->GetAlpha() ) > kAlphaCut )
+    if ( TMath::Abs( track->GetAlpha() - trackMatch->GetAlpha() ) > kAlphaCut ) {
+      status = 10;
       continue;
+    }
     // calculate and extract track with smallest chi2 distance
     AliExternalTrackParam param(*track);
-    if ( param.Rotate( trackMatch->GetAlpha() ) == kFALSE )
+    if ( param.Rotate( trackMatch->GetAlpha() ) == kFALSE ) {
+      status = 12;
       continue;
+    }
     if (tracker) {
       if ( !tracker->PropagateTrackToBxByBz(&param, trackMatch->GetX(), trackMatch->GetMass(), 2.0, kFALSE, 0.8) ) {
+        status = 14;
         continue;
       }
     }
@@ -548,6 +565,12 @@ Int_t   AliESDtools::GetNearestTrack(Int_t indexTrk, Int_t paramType, AliTracker
       chi2Min = chi2;
       trackStatusNearest = ptrack->GetStatus();
     }
+  }
+
+  if (fStreamer) {
+    (*fStreamer) << "debug" <<
+      "status=" << status <<
+      "\n";
   }
 
   if (fStreamer && indexMin > 0) {
