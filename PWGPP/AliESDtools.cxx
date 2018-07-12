@@ -288,7 +288,7 @@ Int_t AliESDtools::CalculateEventVariables() {
   ULong64_t orbitID = (ULong64_t) fEvent->GetOrbitNumber();
   ULong64_t bunchCrossID = (ULong64_t) fEvent->GetBunchCrossNumber();
   ULong64_t periodID = (ULong64_t) fEvent->GetPeriodNumber();
-  fGlobalID = ( (periodID << 36ULL) || (orbitID << 12ULL) | (bunchCrossID) );
+  fGlobalID = ( (periodID << 36ULL) | (orbitID << 12ULL) | (bunchCrossID) );
   //printf("orbit=%llu, bunchCross=%llu, period=%llu, gid=%llu\n", orbitID, bunchCrossID, periodID, fGlobalID);
   //
   //
@@ -476,20 +476,43 @@ void AliESDtools::StreamEventVariables() {
     "\n";
 }
 
-//
-Int_t   AliESDtools::GetNearestTrack(Int_t indexTrk, Int_t paramType, AliTrackerBase *tracker){
+///
+///
+/// \param indexTrk  - track index in ESD event for which nearest track should be found
+/// \param probeType - track type used as probe ( 0 - ITS only, 1 - TPC only, 2 - ITS + TPC)
+/// \param paramType - track type to be looked for ( 0 - ITS only, 1 - TPC only, 2 - ITS + TPC)
+/// \param tracker   - AliTrackerBase instance with initialized geometry + magnetic field
+///
+/// \return track index in ESD event for nearest track in case of success, otherwise -1
+Int_t   AliESDtools::GetNearestTrack(Int_t indexTrk, Int_t probeType, Int_t paramType, AliTrackerBase *tracker){
   //
   const AliESDtrack *trackMatch = fEvent->GetTrack(indexTrk);
   //
-  if ( !trackMatch->IsOn(0x10) || trackMatch->IsOn(0x1) ) {
-    // check only TPC only tracks
-    return -1;
+  switch (probeType) {
+    case 0:
+      if (trackMatch->IsOn(0x1) && !trackMatch->IsOn(0x10))
+        break;
+      else
+        return -1;
+    case 1:
+      if (!trackMatch->IsOn(0x1) && trackMatch->IsOn(0x10))
+        break;
+      else
+        return -1;
+    case 2:
+      if (trackMatch->IsOn(0x1) && trackMatch->IsOn(0x10))
+        break;
+      else
+        return -1;
+    default:
+      printf("Invalid probeType supplied\n");
+      return -1;
   }
   //
   Int_t nTracks = fEvent->GetNumberOfTracks();
   const Double_t ktglCut = .05;
   const Double_t kqptCut = .99;
-  const Double_t kAlphaCut = .5;
+  const Double_t kAlphaCut = .4;
   //
   Double_t chi2Min = 10000;
   Int_t indexMin = -1;
@@ -512,14 +535,17 @@ Int_t   AliESDtools::GetNearestTrack(Int_t indexTrk, Int_t paramType, AliTracker
       continue;
     }
     // status flags: 0x1 - ITSin, 0x10 - TPCin, 0x100 - TRDin, etc
-    if (ptrack->IsOn(0x10)) {
+    if ( (paramType == 0 && ptrack->IsOn(0x10)) ||
+         (paramType == 1 && ptrack->IsOn(0x1)) ||
+         (paramType == 2 && (!ptrack->IsOn(0x1) || !ptrack->IsOn(0x10)))
+       )
+    {
       status = 4;
       continue;
     }
-    if (ptrack->GetKinkIndex(0) < 0) continue;            // skip kink daughters
-    const AliExternalTrackParam * track = nullptr;        //
-    if (paramType == 0) track = ptrack;                   // Global track
-    if (paramType == 1) track = ptrack->GetConstrainedParam();  // TPC only track at inner wall of TPC
+    if (ptrack->GetKinkIndex(0) < 0) // skip kink daughters
+      continue;
+    const AliExternalTrackParam * track = ptrack->GetConstrainedParam();
     if (track == NULL) {
       status = -4;
       continue;
