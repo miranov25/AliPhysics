@@ -3186,8 +3186,10 @@ void  AliAnalysisTaskFilteredTree::SetDefaultAliasesV0(TTree *tree) {
   tree->Draw("Bz","1","goff",1);Double_t bz=tree->GetV1()[0];
   Float_t irocMiddle = (AliTPCROC::Instance()->GetPadRowRadii(0,62)+ AliTPCROC::Instance()->GetPadRowRadii(0,0))*0.5;
   tree->SetAlias("dSector0M",Form("track0.fIp.GetParameterAtRadius(%f,%f+0,13)",irocMiddle,bz));
+  tree->SetAlias("sector0M",Form("track0.fIp.GetParameterAtRadius(%f,%f+0,14)",irocMiddle,bz));
   tree->SetAlias("alpha0M",Form("track0.fIp.GetParameterAtRadius(%f,%f+0,7)",irocMiddle,bz));
   tree->SetAlias("dSector1M",Form("track1.fIp.GetParameterAtRadius(%f,%f+0,13)",irocMiddle,bz));
+  tree->SetAlias("sector1M",Form("track1.fIp.GetParameterAtRadius(%f,%f+0,14)",irocMiddle,bz));
   tree->SetAlias("alpha1M",Form("track1.fIp.GetParameterAtRadius(%f,%f+0,7)",irocMiddle,bz));
   tree->SetAlias("logQP0","sign(track0.fP[4])*log(1+track0.fIp.P())");
   tree->SetAlias("logQP1","sign(track1.fP[4])*log(1+track1.fIp.P())");
@@ -3308,6 +3310,7 @@ void  AliAnalysisTaskFilteredTree::SetDefaultAliasesHighPt(TTree *tree){
   tree->Draw("Bz","1","goff",1);Double_t bz=tree->GetV1()[0];
   Float_t irocMiddle = (AliTPCROC::Instance()->GetPadRowRadii(0,62)+ AliTPCROC::Instance()->GetPadRowRadii(0,0))*0.5;
   tree->SetAlias("dSectorM",Form("esdTrack.fIp.GetParameterAtRadius(%f,%f+0,13)",irocMiddle,bz));
+  tree->SetAlias("sectorM",Form("esdTrack.fIp.GetParameterAtRadius(%f,%f+0,14)",irocMiddle,bz));
   tree->SetAlias("alphaM",Form("esdTrack.fIp.GetParameterAtRadius(%f,%f+0,7)",irocMiddle,bz));
   tree->SetAlias("logQP","sign(esdTrack.fP[4])*log(1+esdTrack.fIp.P())");
   tree->SetAlias("phiInner","atan2(esdTrack.fIp.Py(),esdTrack.fIp.Px()+0)");
