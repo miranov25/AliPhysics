@@ -2363,7 +2363,7 @@ Int_t   AliAnalysisTaskFilteredTree::GetKFParticle(AliESDv0 *const v0, AliESDEve
   // Create KF particle in case the V0 fullfill selection criteria
   //
   // Selection criteria
-  //  0. algorithm cut
+  //  0. algorithm cut - disabled
   //  1. track cut
   //  3. chi2 cut
   //  4. rough mass cut
@@ -2374,7 +2374,7 @@ Int_t   AliAnalysisTaskFilteredTree::GetKFParticle(AliESDv0 *const v0, AliESDEve
   //
   // 0.) algo cut - accept only on the fly
   //
-  if (v0->GetOnFlyStatus() ==kFALSE) return 0;     
+  // if (v0->GetOnFlyStatus() ==kFALSE) return 0;  // disabled     - TO remove
   //
   // 1.) track cut
   // 
@@ -2385,10 +2385,10 @@ Int_t   AliAnalysisTaskFilteredTree::GetKFParticle(AliESDv0 *const v0, AliESDEve
      TCut cutTheta="abs(track0.fP[3])<1&&abs(track1.fP[3])<1";
      TCut cutNcl="track0.GetTPCClusterInfo(2,1)>100&&track1.GetTPCClusterInfo(2,1)>100";
      */  
-  if (TMath::Abs(track0->GetTgl())>1) return 0;
-  if (TMath::Abs(track1->GetTgl())>1) return 0;
-  if ((track0->GetTPCClusterInfo(2,1))<100) return 0;
-  if ((track1->GetTPCClusterInfo(2,1))<100) return 0;
+  // if (TMath::Abs(track0->GetTgl())>1) return 0;          // disabled - TO remove
+  // if (TMath::Abs(track1->GetTgl())>1) return 0;          // disabled- TO remove
+  // if ((track0->GetTPCClusterInfo(2,1))<100) return 0;    // disabled- TO remove
+  // if ((track1->GetTPCClusterInfo(2,1))<100) return 0;    // disabled- TO remove
   Float_t pos0[2]={0}, cov0[3]={0};
   Float_t pos1[2]={0}, cov1[3]={0};
   track0->GetImpactParameters(pos0,cov0);
@@ -2474,7 +2474,7 @@ Int_t   AliAnalysisTaskFilteredTree::GetKFParticle(AliESDv0 *const v0, AliESDEve
   //
   Double_t  errPhi    = V0KF.GetErrPhi();
   Double_t  pointAngle= TMath::ACos(v0->GetV0CosineOfPointingAngle());
-  if (pointAngle/errPhi>10) return 0;  
+  // if (pointAngle/errPhi>10) return 0;    // to remove - and applies later on in case does not belong to X,omega
   //
   return ptype;  
 }

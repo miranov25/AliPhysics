@@ -25,6 +25,7 @@ void AliAnalysisTaskFilteredTest(const char *esdList,
                                  Int_t firstFile = 0,
                                  Int_t nEvents = 1000000000,
                                  Int_t firstEvent = 0,
+                                 Bool_t addWeekDecayFinder=kTRUE,
                                  Bool_t mc = kTRUE)
 {
     TStopwatch timer;
@@ -72,7 +73,42 @@ void AliAnalysisTaskFilteredTest(const char *esdList,
     gROOT->LoadMacro("$ALICE_ROOT/ANALYSIS/macros/AddTaskPIDResponse.C");
     //Bool_t isMC=kFALSE; // kTRUE in case of MC
     AddTaskPIDResponse(mc);
-
+    //
+    if (addWeekDecayFinder) {
+      gROOT->LoadMacro("$ALICE_PHYSICS/PWGLF/STRANGENESS/Cascades/Run2/macros/AddTaskWeakDecayVertexer.C");
+      AliAnalysisTaskWeakDecayVertexer *taskWeekDecayer = (AliAnalysisTaskWeakDecayVertexer *) AddTaskWeakDecayVertexer();
+      //Revertexing configuration
+      taskWeekDecayer->SetPreselectDedxLambda(kTRUE);
+//          taskWeekDecayer->SetExtraCleanup(kTRUE);
+      taskWeekDecayer->SetRevertexAllEvents(kFALSE);
+//          taskWeekDecayer->SetUseExtraEvSels(kTRUE);
+      taskWeekDecayer->SetCentralityInterval(0, 101);
+//Switch both vertexers on, please
+      taskWeekDecayer->SetRevertexAllEvents(kTRUE);
+      taskWeekDecayer->SetRunV0Vertexer(kTRUE);
+      taskWeekDecayer->SetRunCascadeVertexer(kTRUE);
+      taskWeekDecayer->SetDoImprovedDCAV0DauPropagation(kTRUE);
+      taskWeekDecayer->SetDoImprovedDCACascDauPropagation(kTRUE);
+      taskWeekDecayer->SetDoV0Refit(kTRUE);
+      taskWeekDecayer->SetDoCascadeRefit(kTRUE);
+//V0-Related topological selections
+      taskWeekDecayer->SetV0VertexerDCAFirstToPV(0.05);
+      taskWeekDecayer->SetV0VertexerDCASecondtoPV(0.05);
+      taskWeekDecayer->SetV0VertexerDCAV0Daughters(1.40);
+      taskWeekDecayer->SetV0VertexerCosinePA(0.5);              // open pointing angle cut - was 0.95
+      taskWeekDecayer->SetV0VertexerMinRadius(0.2);
+      taskWeekDecayer->SetV0VertexerMaxRadius(220);
+//Cascade-Related topological selections
+      taskWeekDecayer->SetCascVertexerMinV0ImpactParameter(0.05);
+      taskWeekDecayer->SetCascVertexerV0MassWindow(0.008);
+      taskWeekDecayer->SetCascVertexerDCABachToPV(0.05);
+      taskWeekDecayer->SetCascVertexerDCACascadeDaughters(1.4);
+      taskWeekDecayer->SetCascVertexerCascadeMinRadius(0.2);
+      taskWeekDecayer->SetCascVertexerCascadeCosinePA(.5);      // open point angle   - was 0.97
+      taskWeekDecayer->SetUseOptimalTrackParams(kTRUE);
+      //
+      taskWeekDecayer->SetDoMaterialCorrections(kTRUE);
+    }
     //
     // Wagons to run 
     //
