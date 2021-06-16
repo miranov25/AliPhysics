@@ -528,9 +528,10 @@ void AliAnalysisTaskWeakDecayVertexer::UserExec(Option_t *)
             Tracks2V0verticesMC(lESDevent);
         }
         
-        //reset on-the-fly, job is done
-        if(fkUseOptimalTrackParams && !fkUseOptimalTrackParamsBachelor)
-            SelectiveResetV0s(lESDevent, 1);
+        //reset on-the-fly, job is done   - disabled by MI 16.06.2021
+        //  see discussion in https://alice.its.cern.ch/jira/browse/ATO-544?focusedCommentId=269014&page=com.atlassian.jira.plugin.system.issuetabpanels:comment-tabpanel#comment-269014
+        //if(fkUseOptimalTrackParams && !fkUseOptimalTrackParamsBachelor)
+        //    SelectiveResetV0s(lESDevent, 1);
     }
     
     nv0s = lESDevent->GetNumberOfV0s();
