@@ -103,14 +103,16 @@ class AliAODv0;
 #include "AliLog.h"
 #include "AliTrackerBase.h"
 #include "AliV0HypSel.h"
-
+#include "TTreeStream.h"
+#include "AliHelix.h"
+#include "AliV0.h"
 using std::cout;
 using std::endl;
 
 ClassImp(AliAnalysisTaskWeakDecayVertexer)
 
 AliAnalysisTaskWeakDecayVertexer::AliAnalysisTaskWeakDecayVertexer()
-: AliAnalysisTaskSE(), fListHist(0), fPIDResponse(0),
+: AliAnalysisTaskSE(),  fTreeSRedirector(0), fListHist(0), fPIDResponse(0),
 //________________________________________________
 //Options for general task operation
 fTrigType(AliVEvent::kMB),
@@ -178,7 +180,7 @@ fHistPosTrackCounter(0),
 fHistNegTrackCounter(0)
 //________________________________________________
 {
-    SetUseImprovedFinding(); 
+    SetUseImprovedFinding();
 }
 
 AliAnalysisTaskWeakDecayVertexer::AliAnalysisTaskWeakDecayVertexer(const char *name, TString lExtraOptions)
@@ -269,7 +271,7 @@ fHistNegTrackCounter(0)
     fCascadeVertexerSels[5] =   0.98 ;  // min allowed cosine of the cascade pointing angle   (PDC07 : 0.9985 / LHC09a4 : 0.998 )
     fCascadeVertexerSels[6] =   0.9  ;  // min radius of the fiducial volume                  (PDC07 : 0.9    / LHC09a4 : 0.2   )
     fCascadeVertexerSels[7] = 100.   ;  // max radius of the fiducial volume                  (PDC07 : 100    / LHC09a4 : 100   )
-    
+    fTreeSRedirector = new TTreeSRedirector("AliAnalysisTaskWeakDecayVertexer.root","recreate");
     DefineOutput(1, TList::Class()); // Basic Histograms
 }
 
@@ -293,7 +295,8 @@ void AliAnalysisTaskWeakDecayVertexer::UserCreateOutputObjects()
     //------------------------------------------------
     // Particle Identification Setup
     //------------------------------------------------
-    
+    fTreeSRedirector = new TTreeSRedirector("AliAnalysisTaskWeakDecayVertexer.root","recreate");
+
     AliAnalysisManager *man=AliAnalysisManager::GetAnalysisManager();
     AliInputEventHandler* inputHandler = (AliInputEventHandler*) (man->GetInputEventHandler());
     fPIDResponse = inputHandler->GetPIDResponse();
@@ -597,6 +600,18 @@ void AliAnalysisTaskWeakDecayVertexer::Terminate(Option_t *)
 }
 
 //________________________________________________________________________
+void AliAnalysisTaskWeakDecayVertexer::FinishTaskOutput()
+{
+  //
+  // Called one at the end
+  // locally on working node
+  //
+  delete fTreeSRedirector;
+  fTreeSRedirector=NULL;
+}
+
+
+//________________________________________________________________________
 void AliAnalysisTaskWeakDecayVertexer::SetupStandardVertexing()
 //Meant to store standard re-vertexing configuration
 {
@@ -808,8 +823,9 @@ Long_t AliAnalysisTaskWeakDecayVertexer::Tracks2V0vertices(AliESDEvent *event) {
                 pt.PropagateTo(xp,b);
             }else{
                 AliExternalTrackParam *ntp=&nt, *ptp=&pt;
-                AliTrackerBase::PropagateTrackTo(ntp, xn, lNegMassForTracking, 3, kFALSE, 0.75, kFALSE, kTRUE );
-                AliTrackerBase::PropagateTrackTo(ptp, xp, lPosMassForTracking, 3, kFALSE, 0.75, kFALSE, kTRUE );
+                //AliTrackerBase::PropagateTrackTo(ntp, xn, lNegMassForTracking, 3, kFALSE, 0.75, kFALSE, kTRUE );
+                //AliTrackerBase::PropagateTrackTo(ptp, xp, lPosMassForTracking, 3, kFALSE, 0.75, kFALSE, kTRUE );
+              RefitV0TracksToVertex(event,nidx,pidx,ntp,ptp,lUsedOptimalParams,xn,xp);
             }
             
             //select maximum eta range (after propagation)
@@ -1001,7 +1017,6 @@ Long_t AliAnalysisTaskWeakDecayVertexer::Tracks2V0verticesMC(AliESDEvent *event)
             Int_t pidx=pos[k];
             AliESDtrack *ptrk=event->GetTrack(pidx);
             if(!ptrk) continue;
-            
             //==================================================================================
             //Check if same mother
             Int_t lLabelneg = (Int_t) TMath::Abs( ntrk->GetLabel() );
@@ -1091,8 +1106,10 @@ Long_t AliAnalysisTaskWeakDecayVertexer::Tracks2V0verticesMC(AliESDEvent *event)
                 pt.PropagateTo(xp,b);
             }else{
                 AliExternalTrackParam *ntp=&nt, *ptp=&pt;
-                AliTrackerBase::PropagateTrackTo(ntp, xn, lNegMassForTracking, 3, kFALSE, 0.75, kFALSE, kTRUE );
-                AliTrackerBase::PropagateTrackTo(ptp, xp, lPosMassForTracking, 3, kFALSE, 0.75, kFALSE, kTRUE );
+                //AliTrackerBase::PropagateTrackTo(ntp, xn, lNegMassForTracking, 3, kFALSE, 0.75, kFALSE, kTRUE );
+                //AliTrackerBase::PropagateTrackTo(ptp, xp, lPosMassForTracking, 3, kFALSE, 0.75, kFALSE, kTRUE );
+                //
+              RefitV0TracksToVertex(event,nidx,pidx,ntp,ptp,lUsedOptimalParams, xp, xn);
             }
             
             //select maximum eta range (after propagation)
@@ -3053,3 +3070,118 @@ void AliAnalysisTaskWeakDecayVertexer::Print()
     cout<<" Casc: Cascade Max 2D Radius.......: "<<fCascadeVertexerSels[7]<<endl;
     cout << "+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+" <<endl;
 }
+
+///
+/// \param event
+/// \param indexN
+/// \param indexP
+/// \param paramN
+/// \param paramP
+/// \param hasOnTheFly
+/// \param xn
+/// \param xp
+void AliAnalysisTaskWeakDecayVertexer::RefitV0TracksToVertex(AliESDEvent *event, Int_t indexN, Int_t indexP,  AliExternalTrackParam*paramN, AliExternalTrackParam*paramP, Bool_t hasOnTheFly, Float_t xn, Float_t xp){
+  AliESDv0 v0(*paramN,indexN,*paramP,indexP);
+  AliESDtrack * trackN=event->GetTrack(indexN);
+  AliESDtrack * trackP=event->GetTrack(indexP);
+  AliESDVertex *primVertex=(AliESDVertex *)event->GetPrimaryVertex();
+  Float_t vtx[3]={(float)primVertex->GetX(), (float)primVertex->GetY(), (float)primVertex->GetZ()};
+  ///
+  /// make helix intersection
+  Float_t distA[2]={0,0};
+  Float_t pointAngleA[2]={0,0};
+  Float_t radiusA[2]={0,0};
+  for (Int_t iType=0; iType<2; iType++) {
+    const AliExternalTrackParam *ptrackN=trackN,*ptrackP=trackP;
+    if (iType==1) {
+      ptrackN=trackN->GetInnerParam();
+      ptrackP=trackP->GetInnerParam();
+    }
+    AliHelix helixN(*ptrackN);
+    AliHelix helixP(*ptrackP);
+    Double_t phase[2][2] = {{0., 0.},
+                            {0., 0.}};
+    Double_t radius[2] = {0., 0.};
+    Double_t delta[2] = {1000000, 1000000};
+    Float_t rMin = 0;
+    Double_t distance = 0;
+    Double_t radiusC  = 0;
+    Int_t    iphase   = 0;
+    //
+    Int_t points = helixN.GetRPHIintersections(helixP, phase, radius);
+    rMin = radius[0];
+    helixN.ParabolicDCA(helixP, phase[0][0], phase[0][1], radius[0], delta[0]);
+    if (points == 2) {
+      if (radius[1] < rMin) rMin = radius[1];
+      helixN.ParabolicDCA(helixP, phase[1][0], phase[1][1], radius[1], delta[1]);
+    }
+    rMin = TMath::Sqrt(rMin);
+    //
+    if (points==1 || delta[0]<delta[1]){
+        distance = TMath::Sqrt(delta[0]);
+        radiusC  = TMath::Sqrt(radius[0]);
+      }else {
+      distance = TMath::Sqrt(delta[1]);
+      radiusC = TMath::Sqrt(radius[1]);
+      iphase = 1;
+    }
+    Float_t pointAngle = helixN.GetPointAngle(helixP,phase[iphase],vtx);
+    pointAngleA[iType]=pointAngle;
+    distA[iType]=distance;
+    radiusA[iType]=radiusC;
+  }
+  //
+  AliV0 vertexTPC0;
+  AliExternalTrackParam pTPCN(*(trackN->GetInnerParam()));
+  AliExternalTrackParam pTPCP(*(trackP->GetInnerParam()));
+  AliTrackerBase::PropagateTrackToBxByBz(&pTPCN, radiusA[1], trackN->GetMass(), 3, kTRUE, 0.9, kFALSE, kTRUE );
+  AliTrackerBase::PropagateTrackToBxByBz(&pTPCP, radiusA[1], trackP->GetMass(), 3, kTRUE, 0.9, kFALSE, kTRUE );
+  vertexTPC0.SetParamN(pTPCN);
+  vertexTPC0.SetParamP(pTPCP);
+  vertexTPC0.Update(vtx);
+  //
+  AliV0 vertex0;
+  AliExternalTrackParam pN(*(trackN));
+  AliExternalTrackParam pP(*(trackP));
+  AliTrackerBase::PropagateTrackToBxByBz(&pN, radiusA[0], trackN->GetMass(), 3, kTRUE, 0.9, kFALSE, kTRUE );
+  AliTrackerBase::PropagateTrackToBxByBz(&pP, radiusA[0], trackP->GetMass(), 3, kTRUE, 0.9, kFALSE, kTRUE );
+  vertex0.SetParamN(pN);
+  vertex0.SetParamP(pP);
+  vertex0.Update(vtx);
+  //
+
+  // propagate tracks to the V0 radius
+  // if ITS points   -  starting from parameters at primary vertex
+  // if !ITS points  -  starting form TPC inner wall
+  Float_t bz= event->GetMagneticField();
+
+  (*fTreeSRedirector)<<"v0Refit"<<
+    "primVertex="<<primVertex<<
+    "Bz="<<bz<<
+    "hasOnTheFly.="<<hasOnTheFly<<   // flag if onFly parameters used
+    "v0.="<<&v0<<                    // original V0
+    "vertex0.="<<&vertex0<<          // vertex using track param extrapolating from  track DCA
+    "vertexTPC0.="<<&vertexTPC0<<     // vertex using track param extrapolating from  TPC inner wall
+    "xn="<<xn<<            //
+    "xp="<<xp<<            //
+    // helix initial proparagtio without material correction
+    "pointAngleH0="<<pointAngleA[0]<<
+    "pointAngleHTPC0="<<pointAngleA[1]<<
+    "radiusH0="<<radiusA[0]<<
+    "radiusHTPC0="<<radiusA[1]<<
+    "distH0="<<distA[0]<<
+    "distHTPC0="<<distA[1]<<
+    //
+    "track0.="<<trackN<<   // negative esd track
+    "track1.="<<trackP<<   // positive esd track
+    //
+    "pTPCN.="<<&pTPCN<<    // TPC negative track TPC in->  decay vertex
+    "pTPCP.="<<&pTPCP<<    // TPC positive track TPC in->  decay vertex
+    "pN.="<<&pN<<          // egative track from prim ->  decay vertex
+    "pP.="<<&pP<<          // positive trackfrom prim ->   decay vertex
+    //
+    "param0.="<<paramN<<   // AliExternalTrackParams as used for V0 update
+    "param1.="<<paramP<<   // AliExternalTrackParams as used for V0 update
+    "\n";
+}
+
