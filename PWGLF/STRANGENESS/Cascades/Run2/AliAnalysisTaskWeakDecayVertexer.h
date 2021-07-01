@@ -35,6 +35,9 @@ class AliV0HypSel;
 class AliESDpid;
 class AliESDEvent;
 class AliPhysicsSelection;
+class AliESDtrack;
+class AliESDv0;
+class AliExternalTrackParam;
 
 #include "AliEventCuts.h"
 //For mapping functionality
@@ -51,6 +54,8 @@ public:
     virtual void   UserCreateOutputObjects();
     virtual void   UserExec(Option_t *option);
     virtual void   Terminate(Option_t *);
+    virtual void FinishTaskOutput();
+    void RefitV0TracksToVertex(AliESDEvent *event, Int_t indexN, Int_t indexP,  AliExternalTrackParam*paramN, AliExternalTrackParam*paramP, Bool_t hasOnTheFly, Float_t xn, Float_t xp);
 
     void SetPreselectDedx (Bool_t lPreselectDedx= kTRUE ) {
         fkPreselectDedx   = lPreselectDedx;
@@ -335,6 +340,7 @@ public:
     void Print(); 
     //---------------------------------------------------------------------------------------
     
+    TTreeSRedirector* fTreeSRedirector;      //! temp tree to dump output
 
 private:
     // Note : In ROOT, "//!" means "do not stream the data from Master node to Worker node" ...

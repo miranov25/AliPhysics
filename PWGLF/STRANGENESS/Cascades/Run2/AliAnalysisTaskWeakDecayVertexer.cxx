@@ -2829,7 +2829,7 @@ Double_t AliAnalysisTaskWeakDecayVertexer::GetDCAV0Dau( AliExternalTrackParam *p
         //End of preprocessing stage!
         //at this point lPreprocessxp, lPreprocessxn are already good starting points: update helixparams
         if( lPreprocessDCAxy < 999 ) { //some improvement... otherwise discard in all cases, please
-            if(fkDoMaterialCorrection) {
+            if(fkDoMaterialCorrection&0) { ///TODO - Temoperary disabling procedure - to agree with David how to it
                 AliTrackerBase::PropagateTrackTo(nt, lPreprocessxn, lNegMassForTracking, 3, kFALSE, 0.75, kFALSE, kTRUE );
                 AliTrackerBase::PropagateTrackTo(pt, lPreprocessxp, lPosMassForTracking, 3, kFALSE, 0.75, kFALSE, kTRUE );
             }else{
@@ -3081,11 +3081,16 @@ void AliAnalysisTaskWeakDecayVertexer::Print()
 /// \param xn
 /// \param xp
 void AliAnalysisTaskWeakDecayVertexer::RefitV0TracksToVertex(AliESDEvent *event, Int_t indexN, Int_t indexP,  AliExternalTrackParam*paramN, AliExternalTrackParam*paramP, Bool_t hasOnTheFly, Float_t xn, Float_t xp){
+  const Float_t kCentralTracks=3000;
+  const Float_t kMBFraction=0.005;
+  const Float_t kMultFraction=0.01;
   AliESDv0 v0(*paramN,indexN,*paramP,indexP);
   AliESDtrack * trackN=event->GetTrack(indexN);
   AliESDtrack * trackP=event->GetTrack(indexP);
   AliESDVertex *primVertex=(AliESDVertex *)event->GetPrimaryVertex();
   Float_t vtx[3]={(float)primVertex->GetX(), (float)primVertex->GetY(), (float)primVertex->GetZ()};
+  Int_t nTracks=event->GetNumberOfTracks();
+  ///
   ///
   /// make helix intersection
   Float_t distA[2]={0,0};
@@ -3154,9 +3159,17 @@ void AliAnalysisTaskWeakDecayVertexer::RefitV0TracksToVertex(AliESDEvent *event,
   // if ITS points   -  starting from parameters at primary vertex
   // if !ITS points  -  starting form TPC inner wall
   Float_t bz= event->GetMagneticField();
-
+  Bool_t isMCtrue=  TMath::Abs(TMath::Abs(trackP->GetLabel())- TMath::Abs(trackN->GetLabel()) )==1;
+  Bool_t isMultSampled = ((float(nTracks)/kCentralTracks)*gRandom->Rndm())<kMultFraction;   /// randomly sampling the signal
+  Bool_t isMBSampled = gRandom->Rndm()<kMBFraction;
+  if (!(isMCtrue || isMultSampled||isMBSampled)) return;
   (*fTreeSRedirector)<<"v0Refit"<<
-    "primVertex="<<primVertex<<
+    "nTracks="<<nTracks<<
+    "isMCtrue="<<isMCtrue<<
+    "isMultSampled="<<isMultSampled<<
+    "isMBSampled="<<isMBSampled<<
+    //
+    "primVertex.="<<primVertex<<
     "Bz="<<bz<<
     "hasOnTheFly.="<<hasOnTheFly<<   // flag if onFly parameters used
     "v0.="<<&v0<<                    // original V0
