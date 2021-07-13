@@ -13,6 +13,8 @@ init(){
     makeESDList
     splitESDlist
     runParallel
+    #
+    makeNDMapsInvMassParallel
 HELP_USAGE
 
 }
@@ -88,5 +90,31 @@ testMerge(){
     alihadd -k AliAnalysisTaskWeakDecayVertexer.root @debug.list
 
 }
+
+makeNDMapsInvMassParallel(){
+ cat <<HELP_USAGE | helpCat
+    makeNDMaps
+    it takes ~ 10 minutes to extract maps
+    Parameters:
+      $1 - nJobs
+    Algorithm:
+HELP_USAGE
+    [[ $# -ne 1 ]] &&return
+    cat <<EOF >  makendPipelineInvMassl.sh
+#!/bin/bash
+    export hisIndex=\$1
+    root.exe -n -b -l <<\EOF 2>&1 | tee ndPipelineInvMass.log
+    .L $NOTES/JIRA/ATO-544/analyzeHybrid.C
+    int iMap= TString(gSystem->Getenv("hisIndex")).Atoi();
+    makeMaps(iMap);
+    .q
+EOF
+   chmod a+x  makendPipelineInvMassl.sh
+   seq 0 3 |  parallel --memfree 4G -j"${nJobs}" " ./makendPipelineInvMassl.sh {} | tee makeNDMapInvMass{}.log"
+   rm -f mapInvariantMass.root
+   alihadd -k mapInvariantMass.root mapInvariantMass_*.root
+}
+
+
 
 init
