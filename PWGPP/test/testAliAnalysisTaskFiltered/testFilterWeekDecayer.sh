@@ -4,6 +4,9 @@ alias helpCat=cat
 [[ -x "$(command -v pygmentize)" ]] && alias helpCat="pygmentize -O style=borland,linenos=1 -l bash"
 
 init(){
+    [[ -z "${ALILOG_HOST}" ]] && source ${ALICE_ROOT}/libexec/alilog4bash.sh
+    [[ -z "${PWGPP_runMap}" ]] && source ${ALICE_ROOT}/libexec/utilities.sh
+
   cat <<HELP_USAGE | helpCat
     # runParallel
     init
@@ -53,6 +56,8 @@ HELP_USAGE
     export nJobs=$3
     cat <<EOF >  runParallel.sh
 #!/bin/bash
+    alilog_info "runParallel Begin" $(date)
+    touch Begin.info
     root.exe -n -b -l <<\EOF 2>&1 | tee runParalel.log
     .L $AliPhysics_SRC/PWGPP/test/testAliAnalysisTaskFiltered/AliAnalysisTaskFilteredTest.C
     // TODO OCDB as shell parameter
@@ -60,14 +65,27 @@ HELP_USAGE
     //AliAnalysisTaskFilteredTest("esd.list",0,1,1,1,"local:///cvmfs/alice-ocdb.cern.ch/calibration/data/2018/OCDB/",${nChunks},0,${nEvents},0,1,1);
     //AliAnalysisTaskFilteredTest("esd.list",0,1,1,1,"local:///cvmfs/alice-ocdb.cern.ch/calibration/data/2018/OCDB/",${nChunks},0,${nEvents},0,1,0);
     AliAnalysisTaskFilteredTest("esd.list",0,100,5,100,"local:///cvmfs/alice-ocdb.cern.ch/calibration/data/2018/OCDB/",${nChunks},0,${nEvents},0,1,0);
-
      timer.Print();
     .q
+    alilog_info "runParallel END" $(date)
+    touch end.info
 EOF
    chmod a+x runParallel.sh
    export mDir=$(pwd)
    head -n ${nChunks} dir.list   | parallel --memfree 4G -j${nJobs} " cd {};  ${mDir}/runParallel.sh  >  tee runParallel.log"
-  alihadd   -k AliAnalysisTaskWeakDecayVertexer.root dir*/AliAnalysisTaskWeakDecayVertexer.root
+    for a in $(find  dir*/ -size +1k  -iname  Filter*.root | xargs dirname); do echo $a/AliAnalysisTaskWeakDecayVertexer.root;done  > debug.list
+   rm  AliAnalysisTaskWeakDecayVertexer.root
+   alihadd   -k AliAnalysisTaskWeakDecayVertexer.root dir*/AliAnalysisTaskWeakDecayVertexer.root
+   ali_info runParallelxxx
+}
+
+testMerge(){
+   # this is dummy test file
+    rm AliAnalysisTaskWeakDecayVertexer.root
+
+    #
+    for a in $(find  dir*/ -size +1k  -iname  Filter*.root | xargs dirname); do echo $a/AliAnalysisTaskWeakDecayVertexer.root;done  > debug.list
+    alihadd -k AliAnalysisTaskWeakDecayVertexer.root @debug.list
 
 }
 
