@@ -66,7 +66,7 @@ HELP_USAGE
     TStopwatcher timer;
     //AliAnalysisTaskFilteredTest("esd.list",0,1,1,1,"local:///cvmfs/alice-ocdb.cern.ch/calibration/data/2018/OCDB/",${nChunks},0,${nEvents},0,1,1);
     //AliAnalysisTaskFilteredTest("esd.list",0,1,1,1,"local:///cvmfs/alice-ocdb.cern.ch/calibration/data/2018/OCDB/",${nChunks},0,${nEvents},0,1,0);
-    AliAnalysisTaskFilteredTest("esd.list",0,100,5,100,"local:///cvmfs/alice-ocdb.cern.ch/calibration/data/2018/OCDB/",${nChunks},0,${nEvents},0,1,0);
+    AliAnalysisTaskFilteredTest("esd.list",0,1000,100,10000,"local:///cvmfs/alice-ocdb.cern.ch/calibration/data/2018/OCDB/",${nChunks},0,${nEvents},0,1,1);
      timer.Print();
     .q
     alilog_info "runParallel END" $(date)
@@ -93,7 +93,7 @@ testMerge(){
 
 makeNDMapsInvMassParallel(){
  cat <<HELP_USAGE | helpCat
-    makeNDMaps
+    makeNDMaps - make maps for n=8 histograms - if more histograms added number has to be modified
     it takes ~ 10 minutes to extract maps
     Parameters:
       $1 - nJobs
@@ -110,7 +110,7 @@ HELP_USAGE
     .q
 EOF
    chmod a+x  makendPipelineInvMassl.sh
-   seq 0 3 |  parallel --memfree 4G -j"${nJobs}" " ./makendPipelineInvMassl.sh {} | tee makeNDMapInvMass{}.log"
+   seq 0 8 |  parallel --memfree 4G -j"${nJobs}" " ./makendPipelineInvMassl.sh {} | tee makeNDMapInvMass{}.log"
    rm -f mapInvariantMass.root
    alihadd -k mapInvariantMass.root mapInvariantMass_*.root
 }
