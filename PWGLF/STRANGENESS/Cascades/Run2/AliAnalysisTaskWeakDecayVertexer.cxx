@@ -3090,12 +3090,29 @@ void AliAnalysisTaskWeakDecayVertexer::RefitV0TracksToVertex(AliESDEvent *event,
   AliESDVertex *primVertex=(AliESDVertex *)event->GetPrimaryVertex();
   Float_t vtx[3]={(float)primVertex->GetX(), (float)primVertex->GetY(), (float)primVertex->GetZ()};
   Int_t nTracks=event->GetNumberOfTracks();
+  // get PDG code if MC available
+  Int_t PDGMother=0;
+  TParticle *lParticleMother=0,*lParticleN=0,*lParticleP=0;
+  if (MCEvent()) {
+    AliStack *lMCstack = MCEvent()->Stack();
+    Int_t lLabel = (Int_t) TMath::Abs(trackN->GetLabel());
+    lParticleN=lMCstack->Particle( TMath::Abs(trackN->GetLabel()));
+    lParticleP=lMCstack->Particle( TMath::Abs(trackP->GetLabel()));
+    TParticle *lParticle = lMCstack->Particle(lLabel);
+    Int_t lLabelMother = lParticle->GetFirstMother();
+    if (lLabelMother > 0) {
+      //Do not select on primaries so that this list can be used for cascades too
+      //if( lMCstack->IsPhysicalPrimary(lLabelMother) ) continue;
+      lParticleMother = lMCstack->Particle(lLabelMother);
+      PDGMother= lParticleMother->GetPdgCode();
+    }
+  }
   ///
   ///
   /// make helix intersection
-  Float_t distA[2]={0,0};
-  Float_t pointAngleA[2]={0,0};
-  Float_t radiusA[2]={0,0};
+  Double_t distA[2]={0,0};
+  Double_t pointAngleA[2]={0,0};
+  Double_t radiusA[2]={0,0};
   for (Int_t iType=0; iType<2; iType++) {
     const AliExternalTrackParam *ptrackN=trackN,*ptrackP=trackP;
     if (iType==1) {
@@ -3108,7 +3125,7 @@ void AliAnalysisTaskWeakDecayVertexer::RefitV0TracksToVertex(AliESDEvent *event,
                             {0., 0.}};
     Double_t radius[2] = {0., 0.};
     Double_t delta[2] = {1000000, 1000000};
-    Float_t rMin = 0;
+    Double_t rMin = 0;
     Double_t distance = 0;
     Double_t radiusC  = 0;
     Int_t    iphase   = 0;
@@ -3158,7 +3175,7 @@ void AliAnalysisTaskWeakDecayVertexer::RefitV0TracksToVertex(AliESDEvent *event,
   // propagate tracks to the V0 radius
   // if ITS points   -  starting from parameters at primary vertex
   // if !ITS points  -  starting form TPC inner wall
-  Float_t bz= event->GetMagneticField();
+  Double_t bz= event->GetMagneticField();
   Bool_t isMCtrue=  TMath::Abs(TMath::Abs(trackP->GetLabel())- TMath::Abs(trackN->GetLabel()) )==1;
   Bool_t isMultSampled = ((float(nTracks)/kCentralTracks)*gRandom->Rndm())<kMultFraction;   /// randomly sampling the signal
   Bool_t isMBSampled = gRandom->Rndm()<kMBFraction;
@@ -3166,6 +3183,12 @@ void AliAnalysisTaskWeakDecayVertexer::RefitV0TracksToVertex(AliESDEvent *event,
   (*fTreeSRedirector)<<"v0Refit"<<
     "nTracks="<<nTracks<<
     "isMCtrue="<<isMCtrue<<
+    // MC true
+    "PDGMother="<<PDGMother<<
+    "lParticleMother.="<<lParticleMother<<
+    "lParticleN.="<<lParticleN<<
+    "lParticleP.="<<lParticleP<<
+    //
     "isMultSampled="<<isMultSampled<<
     "isMBSampled="<<isMBSampled<<
     //
