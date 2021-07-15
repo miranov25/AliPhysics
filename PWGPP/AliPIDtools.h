@@ -32,7 +32,7 @@ class AliTOFPIDResponse;
 
 
 class AliPIDtools {
-  enum  { kEtaCorr=0x1, kMultCorr=0x2, kPileUpCorr=0x4 };
+  enum  { kEtaCorr=0x1, kMultCorr=0x2, kPileUpCorr=0x4, kQPtTglCorr=0x8,   kElossCorr=0x10};
 public:
   static Int_t GetHash(Int_t run, Int_t passNumber, TString recoPass, Bool_t isMC);
   static Int_t LoadPID(Int_t run, Int_t passNumber, TString recoPass, Bool_t isMC);

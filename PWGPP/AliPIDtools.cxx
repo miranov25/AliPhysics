@@ -201,7 +201,7 @@ Double_t AliPIDtools::GetExpectedTPCSignal(Int_t hash, Int_t particleType, Int_t
   if (pptrack==0) return 0;
   if (corrMask==0x8) return tpcPID->GetPileupCorrectionValue(*pptrack);
   if (returnType==0) {
-    dEdx = tpcPID->GetExpectedSignal(*pptrack, (AliPID::EParticleType) particleType, AliTPCPIDResponse::kdEdxDefault, corrMask & kEtaCorr, corrMask & kMultCorr, corrMask & kPileUpCorr);
+    dEdx = tpcPID->GetExpectedSignal(*pptrack, (AliPID::EParticleType) particleType, AliTPCPIDResponse::kdEdxDefault, corrMask & kEtaCorr, corrMask & kMultCorr, corrMask & kPileUpCorr, corrMask & kQPtTglCorr,  corrMask & kElossCorr);
     return dEdx;
   }
   if (returnType==1) {
@@ -265,7 +265,7 @@ Double_t AliPIDtools::GetExpectedTPCSignalV0(Int_t hash, Int_t particleType, Int
   if (pptrack==0) return 0;
   if (corrMask==0x8) return tpcPID->GetPileupCorrectionValue(*pptrack);
   if (returnType==0) {
-    dEdx = tpcPID->GetExpectedSignal(*pptrack, (AliPID::EParticleType) particleType, AliTPCPIDResponse::kdEdxDefault, corrMask & kEtaCorr, corrMask & kMultCorr, corrMask & kPileUpCorr);
+    dEdx = tpcPID->GetExpectedSignal(*pptrack, (AliPID::EParticleType) particleType, AliTPCPIDResponse::kdEdxDefault, corrMask & kEtaCorr, corrMask & kMultCorr, corrMask & kPileUpCorr, corrMask & kQPtTglCorr,  corrMask & kElossCorr);
     return dEdx;
   }
   if (returnType==1) {
